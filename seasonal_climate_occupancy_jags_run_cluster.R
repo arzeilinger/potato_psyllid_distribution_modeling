@@ -40,8 +40,8 @@ for(t in 1:nseason.year){
 }
 beta1.p~dnorm(0,0.01)
 beta2.p~dnorm(0,0.01)
-delta1.p~dnorm(0,0.01)
-delta2.p~dnorm(0,0.01)
+delta1.p~dnorm(-6,0.01) # delta1.p = a in logistic model
+delta2.p~dnorm(1,0.01) # delta2.p = b in logistic model
 # Prior for missing values of tmn, aet, and cwd
 for(t in 1:nseason.year){
   for(i in 1:nsite){
@@ -54,20 +54,20 @@ for(t in 1:nseason.year){
 
 # Ecological process sub-model
 for(i in 1:nsite){
-  #z[i,1]~dbern(psi)
-  for(t in 1:nseason.year){
-     logit(muZ[i,t]) <- a[t] + b1*tmn[i,t] + b2*pow(tmn[i,t],2) + 
+  for(t in 1:nseason.year){  
+    z[i,t]~dbern(psi[i,t])
+    psi[i,t] <- 1/(1 + exp(-lpsi.lim[i,t]))
+    lpsi.lim[i,t] <- min(999, max(-999, lpsi[i,t]))
+    lpsi[i,t] <- a[t] + b1*tmn[i,t] + b2*pow(tmn[i,t],2) + 
                         b3*tmx[i,t] + b4*pow(tmx[i,t],2) +
                         b5*aet[i,t] + b6*cwd[i,t] + 
                         eta[i]
-     z[i,t]~dbern(muZ[i,t])
- }
-}
+  } #t
+} #i
 
 # Observation sub-model
 # Adapted from Kery and Schaub 2012
-# Long list lengths separated from short and relate to p as Michaelis-Menten function
-# Following Van Strien et al. 2013, 2015
+# Using Michaelis-Menten function to relate list length to p
 for (t in 1:nseason.year){
   for(i in 1:nsite){
     for(j in 1:nrep){
@@ -76,7 +76,8 @@ for (t in 1:nseason.year){
       p[i,j,t] <- 1 / (1 + exp(-lp.lim[i,j,t]))
       lp.lim[i,j,t] <- min(999, max(-999, lp[i,j,t]))
       lp[i,j,t] <- alpha.p[t] + beta1.p*month[i,j,t] + beta1.p*pow(month[i,j,t], 2) + 
-                   (delta1.p*all_lists[i,j,t])/(all_lists[i,j,t] + delta2.p)
+#                  (delta1.p*all_lists[i,j,t])/(all_lists[i,j,t] + delta2.p)
+  	          (exp(delta1.p + delta2.p*all_lists[i,j,t])/(1 + exp(delta1.p + delta2.p*all_lists[i,j,t])))
     } #j
   } #i
 } #t
@@ -132,11 +133,13 @@ inits <- function() list (z=Zst,alpha.p=apst,a=azst)#,
 ## Parameters to monitor
 #parameters <- c("p", "delta1.p", "delta2.p",
 #		"beta1.p", "beta2.p","alpha.p")
-parameters <- c("a", "b1", "b2", "b3", "b4", "b5", "b6", "psi.fs", "mean.p")
+parameters <- c("b1", "b2", "b3", "b4", "b5", "b6", "delta1.p", "delta2.p",
+		"psi.fs", "mean.p", "regres.psi")
+#		"p", "delta1.p", "delta2.p", "muZ")
 
 
 # MCMC parameters
-ni=41000; nb=1000; nt=10; nc=3
+ni=40000; nt=10; nc=3
 # for jags.parfit(), burn-in iterations = n.adapt + n.update
 n.adapt <- 500; n.update <- 500
 
@@ -154,9 +157,9 @@ date()
 stopCluster(cl) # Close the cluster
 # Compute statistics and save output
 saveRDS(occOutput, file = "seasonal_climate_occ_jags_out_full.rds")
-occdctab <- dctable(dynoccOutput)
+occdctab <- dctable(occOutput)
 occResults <- data.frame(rbindlist(occdctab))
 row.names(occResults) <- names(occdctab)
 saveRDS(occResults, file = "seasonal_climate_occ_jags_out_params.rds")
-print(occResults)
+#print(occResults)
 print("SUCCESS!")
