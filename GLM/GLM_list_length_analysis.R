@@ -24,6 +24,10 @@ detectData <- detectDataFunc(AllLists) # All lists
 hist(detectData[detectData$list_length >= 3,]$list_length, breaks = seq(3,40,1))
 hist(detectData$collectors_length) # very few lists with multiple collectors
 table(detectData$detection, detectData$list_length) # Still have a problem of declining detections with greater list length
+# Distribution of list lengths that contain potato psyllid occurrences
+ppData <- detectData[detectData$detection == 1,]
+hist(ppData$list_length)
+# Most potato psyllid occurrences are in very short lists, with a declining number of long lists containing psyllids
 
 #################################################################################
 #### GLMMs
