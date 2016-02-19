@@ -91,7 +91,7 @@ Records$collectionID <- apply(Records[c("eventID", "MonthCollected")], 1, functi
 # Remove duplicate observations that include identical occupancy information 
 Records <- Records[!duplicated(Records[c("Species", "collectionID")]),]
 # Select only records after 1900
-Records <- subset(Records, YearCollected >= 1900)
+Records <- subset(Records, YearCollected >= 1900 & YearCollected < 2015)
 # Subset to only California
 Records <- Records[Records$StateProvince == "California",]
 # Remove NAs
@@ -113,27 +113,27 @@ source("Climate data/Extract_climate_data_functions.R")
 cdir <- "C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Climate data/BCM2014/Rasters"
 # First, extract monthly aet and cwd data
 Records <- Records %>% extractClimateMonthly(., colNames = c("DecimalLongitude", "DecimalLatitude", "YearCollected", "MonthCollected"),
-                                             fac = c("aet", "cwd"), cdir = cdir)
-# Second, extract annual min summary of tmn data
-RecordsClimate2 <- Records %>% extractClimateAnnually(., colNames = c("DecimalLongitude", "DecimalLatitude", "YearCollected"),
-                                                      fac = c("tmn"), summaryType = "min", cdir = cdir) %>%
+                                             fac = c("aet", "cwd"), cdir = cdir) %>%
+                   # Second, extract annual min summary of tmn data
+                   extractClimateAnnually(., colNames = c("DecimalLongitude", "DecimalLatitude", "YearCollected"),
+                                          fac = c("tmn"), summaryType = "min", cdir = cdir) %>%
                    # Third, extract annual max summary of tmx data
                    extractClimateAnnually(., colNames = c("DecimalLongitude", "DecimalLatitude", "YearCollected"),
-                                              fac = c("tmx"), summaryType = "max", cdir = cdir)
+                                          fac = c("tmx"), summaryType = "max", cdir = cdir)
 
+
+#################################################################################
 ## Make species lists from Essig, GBIF, and CDFA datasets
 ## Two lists for Fithian's Proportional Bias model:
 ## PALists = Presence-absence lists; POLists = presence-only lists
 PALists <- make_lists(Records, 4)
 AllLists <- make_lists(Records, 1)
-POLists.i <- as.numeric(which(unlist(lapply(AllLists, function(x) nrow(x) < 3))))
-POLists <- AllLists[unique(POLists.i)]
 speciesNames <- unique(Records$Species)
-# Saving POLists and PALists
-saveRDS(PALists, "Potato psyllid/Potato psyllid data/presence_absence_lists_2015-09-28.rds")
-saveRDS(POLists, "Potato psyllid/Potato psyllid data/presence_only_lists_2015-09-28.rds")
-saveRDS(speciesNames, "Potato psyllid/Potato psyllid data/species_names_for_lists_2015-09-28.rds")
+saveRDS(AllLists, file = "Potato psyllid/Potato psyllid data/All_Hemip_Lists_Climate_2016-02-18.rds")
 
+
+##############################################################################################
+#### Exploring the lists
 ## Combine lists back into data set and save for extracting climate data
 listData <- as.data.frame(rbindlist(AllLists))
 listData[listData$Species == "Bactericera.cockerelli",]
@@ -141,8 +141,8 @@ nrow(listData[listData$Species == "Bactericera.cockerelli",])
 saveRDS(listData, "Potato psyllid/Potato psyllid data/All_Hemip_species_lists_2016-02-18.rds")
 
 # How are the list lengths distributed?
-ListLength <- as.numeric(unlist(lapply(AllLists, function(x) nrow(x))))
-hist(ListLength)
+ListLength <- as.numeric(unlist(lapply(PALists, function(x) nrow(x))))
+hist(ListLength, breaks = seq(4,40,1))
 
 # Where are the lists distributed?
 xyLists <- data.frame(xyFromCell(Ref_raster, cell = as.numeric(levels(listData$cellID))[listData$cellID]))
