@@ -11,7 +11,7 @@ setwd("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Potato ps
 source("C:/Users/Adam/Documents/GitHub/potato_psyllid_distribution_modeling/museum_specimen_analysis_functions.R")
 
 # Load species lists data set with climate data 
-AllLists <- readRDS("Potato psyllid data/All_Hemip_Lists_Climate_2016-02-18.rds")
+AllLists <- readRDS("Potato psyllid data/All_Hemip_Lists_Climate_15km_Cells_2016-02-24.rds")
 
 # Collectors of potato psyllids, from RawRecords data set in making_species_lists
 ppCollectors <- readRDS("Potato psyllid data/potato_psyllid_collectors.rds")
