@@ -3,7 +3,7 @@
 
 rm(list = ls())
 #### Preliminaries
-my_packages<-c('lme4', 'lmerTest', 'data.table', 'tidyr', 'lattice', 'dplyr', 'bbmle')
+my_packages<-c('lme4', 'lmerTest', 'data.table', 'tidyr', 'lattice', 'dplyr', 'bbmle', 'optimx')
 lapply(my_packages, require, character.only=T)
 
 ## Set working directory and load Occupancy functions
@@ -17,7 +17,7 @@ AllLists <- readRDS("Potato psyllid data/All_Hemip_Lists_Climate_15km_Cells_2016
 ppCollectors <- readRDS("Potato psyllid data/potato_psyllid_collectors.rds")
 
 # Keep only long lists (ll > 2)
-longLists <- AllLists %>% rbindlist() %>% as.data.frame() %>% make_lists(., min.list.length = 4)
+longLists <- AllLists %>% rbindlist() %>% as.data.frame() %>% make_lists(., min.list.length = 3)
 longListsDF <- longLists %>% rbindlist() %>% as.data.frame()
 
 # lists that contain collectors of potato psyllids
@@ -27,7 +27,6 @@ ppcLists <- ppcData %>% make_lists(., min.list.length = 3)
 
 # Transform to data frame with pp detection
 detectData <- detectDataFunc(ppcLists) # Long lists
-ppLists.i <- which(detectData$detection == 1)
 
 
 # Exploring data
@@ -37,17 +36,17 @@ ppData <- detectData[detectData$detection == 1,]
 hist(ppData$list_length)
 
 length(unique(detectData$cellID)) # 858 different cells -- too many for the site random effect
-cellTable <- detectData %>% group_by(cellID) %>% summarise(nvisits = length(cellID))
+detectData %>% group_by(cellID) %>% summarise(nvisits = length(cellID))
 
 #################################################################################
 #### GLMMs
-
+require(optimx)
 # GLMM with "long" species lists (length > 2)
 # Full model
 glmModLL1 <- glmer(detection ~ standardize(log(list_length)) + standardize(year) + standardize(month) + I(standardize(month)^2) + 
                     standardize(aet) + standardize(cwd) + standardize(tmn) + standardize(tmx) + (1|cellID), 
                   family = "binomial", data = detectData,
-                  control = glmerControl(optimizer = "Nelder_Mead"))
+                  control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
 # Model without month
 glmModLL2 <- glmer(detection ~ standardize(log(list_length)) + standardize(year) +  
                     standardize(aet) + standardize(cwd) + standardize(tmn) + standardize(tmx) + (1|cellID), 
