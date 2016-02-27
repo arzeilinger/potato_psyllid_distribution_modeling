@@ -16,17 +16,28 @@ AllLists <- readRDS("Potato psyllid data/All_Hemip_Lists_Climate_15km_Cells_2016
 # Collectors of potato psyllids, from RawRecords data set in making_species_lists
 ppCollectors <- readRDS("Potato psyllid data/potato_psyllid_collectors.rds")
 
-# Keep only long lists (ll > 2)
+# Keep only long lists (ll > 3)
 longLists <- AllLists %>% rbindlist() %>% as.data.frame() %>% make_lists(., min.list.length = 3)
 longListsDF <- longLists %>% rbindlist() %>% as.data.frame()
 
-# lists that contain collectors of potato psyllids
+# select only lists that contain collectors of potato psyllids
 ppcCollections <- longListsDF[longListsDF$Collector %in% ppCollectors, "collectionID"]
 ppcData <- longListsDF[longListsDF$collectionID %in% ppcCollections,]
 ppcLists <- ppcData %>% make_lists(., min.list.length = 3)
 
 # Transform to data frame with pp detection
-detectData <- detectDataFunc(ppcLists) # Long lists
+detectData <- detectDataFunc(ppcLists) 
+detectData$lnlist_length <- log(detectData$list_length)
+
+# standardize numeric covariates, include as new variables in data frame
+covars <- c("year", "month", "lnlist_length", "aet", "cwd", "tmn", "tmx")
+covars.i <- as.numeric(sapply(covars, function(x) which(names(detectData) == x), simplify = TRUE))
+for(i in covars.i){
+  var.i <- names(detectData)[i]
+  stdname.i <- paste("std", var.i, sep = "")
+  stdvar.i <- standardize(detectData[,var.i])
+  detectData[,stdname.i] <- stdvar.i
+}
 
 
 # Exploring data
@@ -38,18 +49,26 @@ hist(ppData$list_length)
 length(unique(detectData$cellID)) # 858 different cells -- too many for the site random effect
 detectData %>% group_by(cellID) %>% summarise(nvisits = length(cellID))
 
+
+#### Subsample nondetections
+nabsence <- ppData %>% nrow()*10 # Set number of absences to 10 x number of presences (SDM rule of thumb)
+# Subsample nondetections and recombine with detections
+subabsenceData <- detectData[detectData$detection == 0,] %>% sample_n(., size = nabsence, replace = FALSE) %>% rbind(.,ppData)
+
+
 #################################################################################
 #### GLMMs
-require(optimx)
-# GLMM with "long" species lists (length > 2)
+# GLMM with "long" species lists (length > 3)
+# Using previously standardized covariates
 # Full model
-glmModLL1 <- glmer(detection ~ standardize(log(list_length)) + standardize(year) + standardize(month) + I(standardize(month)^2) + 
-                    standardize(aet) + standardize(cwd) + standardize(tmn) + standardize(tmx) + (1|cellID), 
+glmModFull <- glmer(detection ~ stdlnlist_length + stdyear + stdmonth + I(stdmonth^2) + 
+                    stdaet + stdcwd + stdtmn + stdtmx + (1|cellID), 
                   family = "binomial", data = detectData,
                   control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
+summary(glmModFull)
 # Model without month
-glmModLL2 <- glmer(detection ~ standardize(log(list_length)) + standardize(year) +  
-                    standardize(aet) + standardize(cwd) + standardize(tmn) + standardize(tmx) + (1|cellID), 
+glmModLL2 <- glmer(detection ~ standardize(log(list_length)) + stdyear +  
+                    stdaet + stdcwd + stdtmn + stdtmx + (1|cellID), 
                   family = "binomial", data = detectData,
                   control = glmerControl(optimizer = "Nelder_Mead"))
 # Model with only tmn and tmx
@@ -75,3 +94,15 @@ glmModLL6 <- glmer(detection ~ standardize(log(list_length)) + standardize(year)
                   control = glmerControl(optimizer = "bobyqa"))
 AICtab(glmModLL1,glmModLL2,glmModLL3,glmModLL4,glmModLL5,glmModLL6, base = TRUE)
 summary(glmModLL1)
+
+
+
+#### Model predictions
+# Using the full model
+predictData <- dplyr::filter(detectData, !is.na(aet) & !is.na(cwd) & !is.na(tmn) & !is.na(tmx))
+predictData$predOcc <- predict(glmModFull, type = "response", re.form = NA)
+
+plot(x = predictData$year, y = predictData$predOcc)
+plot(x = predictData$lnlist_length, y = predictData$predOcc)
+plot(x = predictData$tmn, y = predictData$predOcc)
+plot(x = predictData$aet, y = predictData$predOcc)
