@@ -63,44 +63,57 @@ subabsenceData <- detectData[detectData$detection == 0,] %>% sample_n(., size = 
 # Full model
 glmModFull <- glmer(detection ~ stdlnlist_length + stdyear + stdmonth + I(stdmonth^2) + 
                     stdaet + stdcwd + stdtmn + stdtmx + (1|cellID), 
-                  family = "binomial", data = detectData,
-                  control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
+                  family = "binomial", data = subabsenceData,
+                  #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
+                  control = glmerControl(optimizer = "bobyqa"))
 summary(glmModFull)
+# Model with season instead of month (season is a factor)
+glmModSeason <- glmer(detection ~ stdlnlist_length + season*stdyear + 
+                    stdaet + stdcwd + season*stdtmn + season*stdtmx + (1|cellID), 
+                  family = "binomial", data = subabsenceData,
+                  #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
+                  control = glmerControl(optimizer = "bobyqa"))
 # Model without month
-glmModLL2 <- glmer(detection ~ standardize(log(list_length)) + stdyear +  
+glmModLL2 <- glmer(detection ~ stdlnlist_length + stdyear +  
                     stdaet + stdcwd + stdtmn + stdtmx + (1|cellID), 
-                  family = "binomial", data = detectData,
-                  control = glmerControl(optimizer = "Nelder_Mead"))
+                  family = "binomial", data = subabsenceData,
+                  #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
+                  control = glmerControl(optimizer = "bobyqa"))
 # Model with only tmn and tmx
-glmModLL3 <- glmer(detection ~ standardize(log(list_length)) + standardize(year) + 
-                    standardize(tmn) + standardize(tmx) + (1|cellID), 
-                  family = "binomial", data = detectData,
+glmModLL3 <- glmer(detection ~ stdlnlist_length + stdyear + 
+                    stdtmn + stdtmx + (1|cellID), 
+                  family = "binomial", data = subabsenceData,
+                  #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
                   control = glmerControl(optimizer = "bobyqa"))
 # Model with only climate variables
-glmModLL4 <- glmer(detection ~ standardize(log(list_length)) +  
-                    standardize(aet) + standardize(cwd) + standardize(tmn) + standardize(tmx) + (1|cellID), 
-                  family = "binomial", data = detectData,
+glmModLL4 <- glmer(detection ~ stdlnlist_length +  
+                    stdaet + stdcwd + stdtmn + stdtmx + (1|cellID), 
+                  family = "binomial", data = subabsenceData,
+                  #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
                   control = glmerControl(optimizer = "bobyqa"))
 # Model with only year and LL
-glmModLL5 <- glmer(detection ~ standardize(log(list_length)) + standardize(year) +
+glmModLL5 <- glmer(detection ~ stdlnlist_length + stdyear +
                     (1|cellID), 
-                  family = "binomial", data = detectData,
+                  family = "binomial", data = subabsenceData,
+                  #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
                   control = glmerControl(optimizer = "bobyqa"))
 # Model with year*month interaction
-glmModLL6 <- glmer(detection ~ standardize(log(list_length)) + standardize(year)*standardize(month) +
+glmModLL6 <- glmer(detection ~ stdlnlist_length + stdyear*stdmonth +
                      standardize(year)*I(standardize(month)^2) +
                     (1|cellID), 
-                  family = "binomial", data = detectData,
+                  family = "binomial", data = subabsenceData,
+                  #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
                   control = glmerControl(optimizer = "bobyqa"))
-AICtab(glmModLL1,glmModLL2,glmModLL3,glmModLL4,glmModLL5,glmModLL6, base = TRUE)
-summary(glmModLL1)
+AICtab(glmModFull, glmModSeason, glmModLL2, glmModLL3, glmModLL4, glmModLL5, glmModLL6, base = TRUE)
+# glmModLL2 (full model without month terms) seems to be best
+summary(glmModLL2)
 
 
 
 #### Model predictions
 # Using the full model
 predictData <- dplyr::filter(detectData, !is.na(aet) & !is.na(cwd) & !is.na(tmn) & !is.na(tmx))
-predictData$predOcc <- predict(glmModFull, type = "response", re.form = NA)
+predictData$predOcc <- predict(glmModLL2, type = "response", re.form = NA)
 
 plot(x = predictData$year, y = predictData$predOcc)
 plot(x = predictData$lnlist_length, y = predictData$predOcc)
