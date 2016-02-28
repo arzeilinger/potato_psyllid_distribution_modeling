@@ -50,72 +50,69 @@ length(unique(detectData$cellID)) # 858 different cells -- too many for the site
 detectData %>% group_by(cellID) %>% summarise(nvisits = length(cellID))
 
 
-#### Subsample nondetections
-nabsence <- ppData %>% nrow()*10 # Set number of absences to 10 x number of presences (SDM rule of thumb)
-# Subsample nondetections and recombine with detections
-subabsenceData <- detectData[detectData$detection == 0,] %>% sample_n(., size = nabsence, replace = FALSE) %>% rbind(.,ppData)
-
-
 #################################################################################
 #### GLMMs
-# GLMM with "long" species lists (length > 3)
-# Using previously standardized covariates
+## GLMM with "long" species lists (length > 3)
+## Using previously standardized covariates and full data set
+
 # Full model
 glmModFull <- glmer(detection ~ stdlnlist_length + stdyear + stdmonth + I(stdmonth^2) + 
                     stdaet + stdcwd + stdtmn + stdtmx + (1|cellID), 
-                  family = "binomial", data = subabsenceData,
+                  family = "binomial", data = detectData,
                   #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
                   control = glmerControl(optimizer = "bobyqa"))
 summary(glmModFull)
 # Model with season instead of month (season is a factor)
 glmModSeason <- glmer(detection ~ stdlnlist_length + season*stdyear + 
                     stdaet + stdcwd + season*stdtmn + season*stdtmx + (1|cellID), 
-                  family = "binomial", data = subabsenceData,
+                  family = "binomial", data = detectData,
                   #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
                   control = glmerControl(optimizer = "bobyqa"))
 # Model without month
 glmModLL2 <- glmer(detection ~ stdlnlist_length + stdyear +  
                     stdaet + stdcwd + stdtmn + stdtmx + (1|cellID), 
-                  family = "binomial", data = subabsenceData,
+                  family = "binomial", data = detectData,
                   #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
                   control = glmerControl(optimizer = "bobyqa"))
 # Model with only tmn and tmx
 glmModLL3 <- glmer(detection ~ stdlnlist_length + stdyear + 
                     stdtmn + stdtmx + (1|cellID), 
-                  family = "binomial", data = subabsenceData,
+                  family = "binomial", data = detectData,
                   #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
                   control = glmerControl(optimizer = "bobyqa"))
 # Model with only climate variables
 glmModLL4 <- glmer(detection ~ stdlnlist_length +  
                     stdaet + stdcwd + stdtmn + stdtmx + (1|cellID), 
-                  family = "binomial", data = subabsenceData,
+                  family = "binomial", data = detectData,
                   #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
                   control = glmerControl(optimizer = "bobyqa"))
 # Model with only year and LL
 glmModLL5 <- glmer(detection ~ stdlnlist_length + stdyear +
                     (1|cellID), 
-                  family = "binomial", data = subabsenceData,
+                  family = "binomial", data = detectData,
                   #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
                   control = glmerControl(optimizer = "bobyqa"))
 # Model with year*month interaction
 glmModLL6 <- glmer(detection ~ stdlnlist_length + stdyear*stdmonth +
                      standardize(year)*I(standardize(month)^2) +
                     (1|cellID), 
-                  family = "binomial", data = subabsenceData,
+                  family = "binomial", data = detectData,
                   #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
                   control = glmerControl(optimizer = "bobyqa"))
-ms <- AICtab(glmModFull, glmModSeason, glmModLL2, glmModLL3, glmModLL4, glmModLL5, glmModLL6, base = TRUE)
+AICtab(glmModFull, glmModSeason, glmModLL2, glmModLL3, glmModLL4, glmModLL5, glmModLL6, base = TRUE)
 # glmModLL2 (full model without month terms) seems to be best
 summary(glmModLL2)
 
 
-
 ###########################################################################################################
-#### Run subsampling of nondetections and model selection many times
-# Subsample nondetections
-nabsence <- ppData %>% nrow()*10 # Set number of absences to 10 x number of presences (SDM rule of thumb)
+#### Subsampling nondetections and running model selection many times
+# Remove NAs from covariates
+detectData <- dplyr::filter(detectData, !is.na(aet) & !is.na(cwd) & !is.na(tmn) & !is.na(tmx))
 
-sampleAndSelect <- function(x){
+# Number of nondetections
+nabsence <- ppData %>% nrow()*10 # Set number of absences to 10 x number of presences (Gio's SDM rule of thumb)
+
+sampleSelect <- function(x){
   # Subsample nondetections and recombine with detections
   subabsence <- detectData[detectData$detection == 0,] %>% sample_n(., size = x, replace = FALSE) %>% rbind(.,ppData)
   #### Run subabsence data set through models
@@ -148,12 +145,14 @@ sampleAndSelect <- function(x){
   return(bestModel)
 }
 
-times <- 50
+times <- 100 # Number of times to subsample nondetections and fit to model
 runs <- rep(nabsence, times) 
-sampleSelectRuns <- sapply(runs, sampleAndSelect, simplify = TRUE)
+runSampleSelect <- sapply(runs, sampleSelect, simplify = TRUE)
+sum(runsampleSelect == "glmMod2")
+# glmMod2 is most often the model selected, but not always
 
 
-#### Get coefficients from the best model, run multiple times
+#### Get coefficients from the best model (glmMod2), run multiple times
 modelCoefFunc <- function(x){
   # Subsample nondetections and recombine with detections
   subabsence <- detectData[detectData$detection == 0,] %>% sample_n(., size = x, replace = FALSE) %>% rbind(.,ppData)
@@ -163,16 +162,19 @@ modelCoefFunc <- function(x){
                      family = "binomial", data = subabsence,
                      #control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
                      control = glmerControl(optimizer = "bobyqa"))
-  return(summary(glmMod2))
+  return(glmMod2)
 }
-extractModelRuns <- lapply(runs, modelCoefFunc)
+
+extractModelRuns <- lapply(runs, function(x) modelCoefFunc)
+modelSummaries <- lapply(extractModelRuns, summary)
+
 
 #### Model predictions
-# Using the full model
-predictData <- dplyr::filter(detectData, !is.na(aet) & !is.na(cwd) & !is.na(tmn) & !is.na(tmx))
-predictData$predOcc <- predict(glmModLL2, type = "response", re.form = NA)
+# Using one subsample iteration of best model
+bestModel <- extractModelRuns[[1]]
+detectData$predOcc <- predict(bestModel, type = "response", re.form = NA)
 
-plot(x = predictData$year, y = predictData$predOcc)
-plot(x = predictData$lnlist_length, y = predictData$predOcc)
-plot(x = predictData$tmn, y = predictData$predOcc)
-plot(x = predictData$aet, y = predictData$predOcc)
+plot(x = detectData$year, y = detectData$predOcc)
+plot(x = detectData$lnlist_length, y = detectData$predOcc)
+plot(x = detectData$tmn, y = detectData$predOcc)
+plot(x = detectData$aet, y = detectData$predOcc)
