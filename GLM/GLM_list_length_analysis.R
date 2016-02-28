@@ -148,7 +148,7 @@ sampleSelect <- function(x){
 times <- 100 # Number of times to subsample nondetections and fit to model
 runs <- rep(nabsence, times) 
 runSampleSelect <- sapply(runs, sampleSelect, simplify = TRUE)
-sum(runsampleSelect == "glmMod2")
+table(runSampleSelect)
 # glmMod2 is most often the model selected, but not always
 
 
@@ -165,7 +165,7 @@ modelCoefFunc <- function(x){
   return(glmMod2)
 }
 
-extractModelRuns <- lapply(runs, function(x) modelCoefFunc)
+extractModelRuns <- lapply(runs, modelCoefFunc)
 modelSummaries <- lapply(extractModelRuns, summary)
 
 
