@@ -38,6 +38,26 @@ detectDataFunc <- function(spLists){
   return(detectData)
 }
 
+# Function to transform species counts lists into data frame
+countDataFunc <- function(spLists, speciesName = "Bactericera.cockerelli"){
+  countData <- data.frame(year = as.numeric(unlist(lapply(strsplit(names(spLists), ", "), function(x) x[1]))), 
+                          cellID = unlist(lapply(strsplit(names(spLists), ", "), function(x) x[2])),
+                          month = unlist(lapply(strsplit(names(spLists), ", "), function(x) x[3])),
+                          season = unlist(lapply(1:length(spLists), function(x) unique(spLists[[x]]$Season))),
+                          eventID = unlist(lapply(1:length(spLists), function(x) unique(spLists[[x]][,"eventID"]))),
+                          list_length = as.numeric(unlist(lapply(spLists, function(x) length(unique(x$Species))))),
+                          collectors_length = as.numeric(unlist(lapply(1:length(spLists), function(x) length(unique(spLists[[x]][,"Collector"]))))),
+                          aet = unlist(lapply(1:length(spLists), function(x) mean(spLists[[x]]$aet, na.rm = TRUE))),
+                          cwd = unlist(lapply(1:length(spLists), function(x) mean(spLists[[x]]$cwd, na.rm = TRUE))),
+                          tmn = unlist(lapply(1:length(spLists), function(x) mean(spLists[[x]]$tmn, na.rm = TRUE))),
+                          tmx = unlist(lapply(1:length(spLists), function(x) mean(spLists[[x]]$tmx, na.rm = TRUE))),
+                          count = unlist(lapply(spLists, function(x) sum(x$Species == speciesName))))
+  countData$month <- as.numeric(levels(countData$month))[countData$month]
+  countData$cellID <- as.numeric(levels(countData$cellID))[countData$cellID]
+  return(countData)
+}
+
+
 glmer_wrapper <- function(species_name = NA, detection_table = NA){
         options(na.action = "na.fail")
         # run full model
