@@ -24,8 +24,9 @@ detectDataFunc <- function(spLists){
   detectData <- data.frame(year = as.numeric(unlist(lapply(strsplit(names(spLists), ", "), function(x) x[1]))), 
                            cellID = unlist(lapply(strsplit(names(spLists), ", "), function(x) x[2])),
                            month = unlist(lapply(strsplit(names(spLists), ", "), function(x) x[3])),
+                           ymo = unlist(lapply(1:length(spLists), function(x) unique(spLists[[x]]$ymo))),
                            season = unlist(lapply(1:length(spLists), function(x) unique(spLists[[x]]$Season))),
-                           eventID = unlist(lapply(1:length(spLists), function(x) unique(spLists[[x]][,"eventID"]))),
+                           collectionID = unlist(lapply(1:length(spLists), function(x) unique(spLists[[x]]$collectionID))),
                            list_length = as.numeric(unlist(lapply(spLists, nrow))),
                            collectors_length = as.numeric(unlist(lapply(1:length(spLists), function(x) length(unique(spLists[[x]][,"Collector"]))))),
                            aet = unlist(lapply(1:length(spLists), function(x) mean(spLists[[x]]$aet, na.rm = TRUE))),
@@ -38,6 +39,28 @@ detectDataFunc <- function(spLists){
   return(detectData)
 }
 
+
+# Make data matrices for JAGS GLMM with spatial random effect
+makeEcoDataMatrix <- function(var, data = detectData, fill = NA){
+  dataf <- data[,c("ymo","cellID",var)]
+  dataMatrix <- eval(substitute(spread(dataf, key = cellID, value = y, fill = fill), 
+                                list(y = as.name(names(dataf)[3]))))
+  return(as.matrix(dataMatrix[,-1]))
+}
+
+
+################################################################################################################
+#### Functions for analysis of count data with N-mixture model or Poisson GLM
+
+# Function for Shannon's Diversity index
+diversityFunc <- function(x){
+  require(vegan)
+  species <- unique(x[,"Species"])
+  speciesCounts <- sapply(species, function(y) sum(x[,"Species"] == y), simplify = TRUE)
+  H <- diversity(speciesCounts)
+  return(H)
+}
+
 # Function to transform species counts lists into data frame
 countDataFunc <- function(spLists, speciesName = "Bactericera.cockerelli"){
   countData <- data.frame(year = as.numeric(unlist(lapply(strsplit(names(spLists), ", "), function(x) x[1]))), 
@@ -46,6 +69,8 @@ countDataFunc <- function(spLists, speciesName = "Bactericera.cockerelli"){
                           season = unlist(lapply(1:length(spLists), function(x) unique(spLists[[x]]$Season))),
                           eventID = unlist(lapply(1:length(spLists), function(x) unique(spLists[[x]][,"eventID"]))),
                           list_length = as.numeric(unlist(lapply(spLists, function(x) length(unique(x$Species))))),
+                          total_n = as.numeric(unlist(lapply(spLists, nrow))),
+                          diversity = as.numeric(unlist(lapply(spLists, diversityFunc))),
                           collectors_length = as.numeric(unlist(lapply(1:length(spLists), function(x) length(unique(spLists[[x]][,"Collector"]))))),
                           aet = unlist(lapply(1:length(spLists), function(x) mean(spLists[[x]]$aet, na.rm = TRUE))),
                           cwd = unlist(lapply(1:length(spLists), function(x) mean(spLists[[x]]$cwd, na.rm = TRUE))),
