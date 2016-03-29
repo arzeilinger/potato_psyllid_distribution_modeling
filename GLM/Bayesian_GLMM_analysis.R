@@ -67,7 +67,7 @@ inits <- function() list(mu.alpha = runif(1, -3, 3),
                          beta7 = runif(1, -3, 3),
                          beta8 = runif(1, -3, 3))
 # Monitored parameters
-params <- c('mu', 'beta1', 'beta2', 'beta3', 'beta4', 'beta5', 'beta6', 'beta7', 'beta8')
+params <- c('mu', 'beta1', 'beta2', 'beta3', 'beta4', 'beta5', 'beta6', 'beta7', 'beta8', 'alpha')
 # MCMC specifications
 ni=81000; nt=10; nc=3
 # for jags.parfit(), burn-in iterations = n.adapt + n.update
