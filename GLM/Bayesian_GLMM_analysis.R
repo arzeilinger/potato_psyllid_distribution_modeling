@@ -1,11 +1,11 @@
 #### Bayesian GLMM analysis
 
 #### Preliminaries
-rm(list = ls())
+#rm(list = ls())
 my_packages<-c('data.table', 'snow', 'dclone', 'rjags', 'R2jags')
 lapply(my_packages, require, character.only=T)
 
-setwd("C:/Users/Adam/Documents/GitHub/potato_psyllid_distribution_modeling/GLM")
+#setwd("C:/Users/Adam/Documents/GitHub/potato_psyllid_distribution_modeling/GLM")
 
 jagsGLMMdata <- readRDS("Data_JAGS_GLMM.rds")
 
@@ -24,6 +24,9 @@ cat("
     tau.alpha <- 1 / (sigma.alpha * sigma.alpha)
     sigma.alpha ~ dunif(0, 5)
     
+    # Grand mean
+    mu ~ dnorm(0, 0.01)
+
     # For the fixed effect coefficients
     beta1 ~ dnorm(0, 0.001)
     beta2 ~ dnorm(0, 0.001)
@@ -31,13 +34,17 @@ cat("
     beta4 ~ dnorm(0, 0.001)
     beta5 ~ dnorm(0, 0.001)
     beta6 ~ dnorm(0, 0.001)
+    beta7 ~ dnorm(0, 0.001)
+    beta8 ~ dnorm(0, 0.001)
 
     # Likelihood
     for (i in 1:nlist){ # i = events (year-months)
       for(j in 1:nsite) { # j = sites
         detectionMatrix[i,j] ~ dbern(p[i,j])  # Distribution for random part
-        logit(p[i,j]) <- alpha[j] + beta1*year[i,j] + beta2*list_length[i,j] + 
-                          beta3*aet[i,j] + beta4*cwd[i,j] + beta5*tmn[i,j] + beta6*tmx[i,j]
+        logit(p[i,j]) <- mu + beta1*year[i,j] + beta2*month[i,j] + beta3*pow(month[i,j],2) +
+                          beta4*list_length[i,j] + 
+                          beta5*aet[i,j] + beta6*cwd[i,j] + beta7*tmn[i,j] + beta8*tmx[i,j] +
+			  alpha[j]
       } #j
     } #i
     }",fill = TRUE)
@@ -50,18 +57,21 @@ sink()
 # Specify initial values for mu.alpha, sigma.alpha, and beta1
 inits <- function() list(mu.alpha = runif(1, -3, 3),
                          sigma.alpha = runif(1, 0, 5),
-                         beta1 = runif(1, -3, 3),
+                         mu = runif(1, -3, 3),
+			 beta1 = runif(1, -3, 3),
                          beta2 = runif(1, -3, 3),
                          beta3 = runif(1, -3, 3),
                          beta4 = runif(1, -3, 3),
                          beta5 = runif(1, -3, 3),
-                         beta6 = runif(1, -3, 3))
+                         beta6 = runif(1, -3, 3),
+                         beta7 = runif(1, -3, 3),
+                         beta8 = runif(1, -3, 3))
 # Monitored parameters
-params <- c('beta1', 'beta2', 'beta3', 'beta4', 'beta5', 'beta6')
+params <- c('mu', 'beta1', 'beta2', 'beta3', 'beta4', 'beta5', 'beta6', 'beta7', 'beta8')
 # MCMC specifications
-ni=500; nt=10; nc=3
+ni=81000; nt=10; nc=3
 # for jags.parfit(), burn-in iterations = n.adapt + n.update
-n.adapt <- 5; n.update <- 5
+n.adapt <- 500; n.update <- 500
 nb <- n.adapt + n.update
 
 

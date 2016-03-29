@@ -42,6 +42,9 @@ for(i in covars.i){
   detectData[,stdname.i] <- stdvar.i
 }
 
+# Save detectData
+saveRDS(detectData, file = "potato_psyllid_detection_dataset.rds")
+
 # Just potato psyllid occurrences
 ppData <- detectData[detectData$detection == 1,]
 
@@ -53,6 +56,7 @@ names(jagsData) <- stdcovars
 
 jagsGLMMdata <- list(detectionMatrix = detectionMatrix,
                      year = jagsData$stdyear,
+                     month = jagsData$stdmonth,
                      list_length = jagsData$stdlnlist_length,
                      aet = jagsData$stdaet,
                      cwd = jagsData$stdcwd,
