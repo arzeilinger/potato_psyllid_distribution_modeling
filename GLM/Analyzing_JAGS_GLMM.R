@@ -18,9 +18,11 @@ glmmResults[grep("beta", glmmResults$params)]
 # # Covariate results
 # glmmResults[grep("beta", glmmResults$params),]
 
-# load detection dataset from GitHub
+## load detection dataset from GitHub
 url <- "https://raw.githubusercontent.com/arzeilinger/potato_psyllid_distribution_modeling/master/GLM/potato_psyllid_detection_dataset.csv"
 detectData <- getURL(url) %>% textConnection() %>% read.csv(., header = TRUE)
+## Load detection dataset from local folder
+# detectData <- readRDS("potato_psyllid_detection_dataset.rds")
 str(detectData)
 
 ##################################################################################
@@ -66,8 +68,7 @@ plot(x = detectData$month, y = detectData$predocc)
 plot(x = detectData$lnlist_length, y = detectData$predocc)
 
 # trivariate plots with month and year
-zz <- with(detectData, interp(x = year, y = month, z = predocc, duplicate = 'mean'))
+zz <- with(detectData, interp(x = year, y = month, z = predocc, duplicate = 'median'))
 pdf("year-month-occupancy_contourplot.pdf")
-  filled.contour(zz, col = topo.colors(32),
-                 xlab = "Year", ylab = "Month")
+  filled.contour(zz, col = topo.colors(32), xlab = "Year", ylab = "Month")
 dev.off()
