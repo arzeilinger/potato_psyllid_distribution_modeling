@@ -5,16 +5,22 @@ my_packages<-c('data.table', 'snow', 'dclone', 'rjags', 'R2jags',
                'lattice', 'akima', 'tidyr', 'RCurl', 'foreign')
 lapply(my_packages, require, character.only=T)
 
-# Load model coefficient estimates
-glmmResults <- readRDS("climate_glmm_jags_out_params.rds")
-glmmResults <- glmmResults[,c("mean", "X2.5.", "X97.5.", "r.hat")]
-names(glmmResults) <- c("mean", "cil", "ciu", "rhat")
-glmmResults$params <- row.names(glmmResults)
-# Covariate results
-glmmResults[grep("beta", glmmResults$params),]
+## Load JAGS model coefficient estimates from GitHub
+url <- "https://raw.githubusercontent.com/arzeilinger/potato_psyllid_distribution_modeling/master/GLM/climate_glmm_params.csv"
+glmmResults <- getURL(url) %>% textConnection() %>% read.csv(., header = TRUE)
+glmmResults[grep("beta", glmmResults$params)]
 
-# load detection data set
-detectData <- readRDS("potato_psyllid_detection_dataset.rds")
+## Load JAGS coefficient estimates from local folder
+# glmmResults <- readRDS("climate_glmm_jags_out_params.rds")
+# glmmResults <- glmmResults[,c("mean", "X2.5.", "X97.5.", "r.hat")]
+# names(glmmResults) <- c("mean", "cil", "ciu", "rhat")
+# glmmResults$params <- row.names(glmmResults)
+# # Covariate results
+# glmmResults[grep("beta", glmmResults$params),]
+
+# load detection dataset from GitHub
+url <- "https://raw.githubusercontent.com/arzeilinger/potato_psyllid_distribution_modeling/master/GLM/potato_psyllid_detection_dataset.csv"
+detectData <- getURL(url) %>% textConnection() %>% read.csv(., header = TRUE)
 str(detectData)
 
 ##################################################################################
@@ -40,9 +46,9 @@ mu <- glmmResults[glmmResults$params == "mu", "mean"]
 ## Function to predict potato psyllid occupancy from model results
 # includes site random effects
 predFunc <- function(x){
-  yv <- plogis(mu + beta[1]*x[1] + beta[2]*x[2] + beta[3]*x[2]^2 + # grand mean, year, and month covariates
-                 beta[4]*x[3] + # list length
-                 beta[5]*x[4] + beta[6]*x[5] + beta[7]*x[6] + beta[8]*x[7] + # climate covariates
+  yv <- plogis(mu + betas[1]*x[1] + betas[2]*x[2] + betas[3]*x[2]^2 + # grand mean, year, and month covariates
+                 betas[4]*x[3] + # list length
+                 betas[5]*x[4] + betas[6]*x[5] + betas[7]*x[6] + betas[8]*x[7] + # climate covariates
                  x[8]) # site random effect (alpha)
   return(yv)
 }
