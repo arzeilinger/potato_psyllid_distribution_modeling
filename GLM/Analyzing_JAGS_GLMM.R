@@ -2,9 +2,10 @@
 
 #### Preliminaries
 my_packages<-c('data.table', 'snow', 'dclone', 'rjags', 'R2jags',
-               'lattice', 'akima', 'tidyr')
+               'lattice', 'akima', 'tidyr', 'RCurl', 'foreign')
 lapply(my_packages, require, character.only=T)
 
+# Load model coefficient estimates
 glmmResults <- readRDS("climate_glmm_jags_out_params.rds")
 glmmResults <- glmmResults[,c("mean", "X2.5.", "X97.5.", "r.hat")]
 names(glmmResults) <- c("mean", "cil", "ciu", "rhat")
@@ -16,11 +17,9 @@ glmmResults[grep("beta", glmmResults$params),]
 detectData <- readRDS("potato_psyllid_detection_dataset.rds")
 str(detectData)
 
-occData <- spread(detectData[,c("ymo", "cellID", "detection")], key = cellID, value = detection)
-
 ##################################################################################
 #### Model predictions
-## Joining random effects to detection dataset
+## Joining random effects (alphas) to detection dataset
 # Make a data.frame that links the alpha estimate to the cellID, sorting the cellIDs is critical! 
 siteRE <- data.frame(alpha = glmmResults[grep("alpha", glmmResults$params), "mean"],
                      cellID = sort(unique(detectData$cellID)))
@@ -38,22 +37,29 @@ detectData <- cbind(detectData, siteAlpha)
 betas <- glmmResults[grep("beta", glmmResults$params), "mean"]
 mu <- glmmResults[glmmResults$params == "mu", "mean"]
 
+## Function to predict potato psyllid occupancy from model results
+# includes site random effects
 predFunc <- function(x){
   yv <- plogis(mu + beta[1]*x[1] + beta[2]*x[2] + beta[3]*x[2]^2 + # grand mean, year, and month covariates
                  beta[4]*x[3] + # list length
-                 beta[5]*x[4] + beta[6]*x[5] + beta[7]*x[6] + beta[8]*x[7]) # climate covariates
+                 beta[5]*x[4] + beta[6]*x[5] + beta[7]*x[6] + beta[8]*x[7] + # climate covariates
+                 x[8]) # site random effect (alpha)
   return(yv)
 }
 
-# Use standardized old data
-stdxmat <- detectData[,c("stdyear", "stdmonth", "stdlnlist_length", "stdaet", "stdcwd", "stdtmn", "stdtmx")]
+# Use standardized old data to get predicted occupancy
+stdxmat <- detectData[,c("stdyear", "stdmonth", "stdlnlist_length", "stdaet", "stdcwd", "stdtmn", "stdtmx", "siteAlpha")]
+# Predicted occupancy
 detectData$predocc <- apply(stdxmat, 1, predFunc)
 
+# plots
 plot(x = detectData$year, y = detectData$predocc)
 plot(x = detectData$aet, y = detectData$predocc)
 plot(x = detectData$tmn, y = detectData$predocc)
 plot(x = detectData$month, y = detectData$predocc)
+plot(x = detectData$lnlist_length, y = detectData$predocc)
 
+# trivariate plots with month and year
 zz <- with(detectData, interp(x = year, y = month, z = predocc, duplicate = 'mean'))
 pdf("year-month-occupancy_contourplot.pdf")
   filled.contour(zz, col = topo.colors(32),
