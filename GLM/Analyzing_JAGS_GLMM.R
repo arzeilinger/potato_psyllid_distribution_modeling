@@ -8,7 +8,7 @@ lapply(my_packages, require, character.only=T)
 ## Load JAGS model coefficient estimates from GitHub
 url <- "https://raw.githubusercontent.com/arzeilinger/potato_psyllid_distribution_modeling/master/GLM/climate_glmm_params.csv"
 glmmResults <- getURL(url) %>% textConnection() %>% read.csv(., header = TRUE)
-glmmResults[grep("beta", glmmResults$params)]
+glmmResults[grep("beta", glmmResults$params),]
 
 ## Load JAGS coefficient estimates from local folder
 # glmmResults <- readRDS("climate_glmm_jags_out_params.rds")
