@@ -8,13 +8,11 @@ my.packages<-c('ecoengine', 'rgbif', 'lubridate',
                'rgdal', 'rgeos', 'tidyr', 'ggmap', 'dplyr')
 lapply(my.packages, require, character.only=T)
 
-setwd("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Potato psyllid")
+# Load functions
+source("R_functions/museum_specimen_analysis_functions.R")
+#setwd("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Potato psyllid")
 
 
-# California WKT polygon
-CApolygon <- 'POLYGON((-124.541015 41.902277, -120.058593 41.967659, -119.970703 39.095962, -114.082031 34.885930,-114.521484 32.546813,-120.410156 32.249974,  -125.419921 40.245991, -124.541015 41.902277))'
-# WKT polygon of CA, AZ, UT, NV
-CAUNpolygon <- 'POLYGON((-124.3828 41.994332, -110.979479 41.994332, -110.979479 41.073272, -109.045886 41.006981, -109.089831 31.309212, -110.979479 31.309212, -115.242175 32.651086, -117.263659 32.428807,  -121.130847 34.227845, -124.646472 40.340398, -124.3828 41.994332))'
 
 
 ##########################################################################################
@@ -35,12 +33,12 @@ hemipGBIF <- occ_search(taxonKey = hemipKey,
                         return = "data", limit = hemipCount,
                         fields = fieldNames)
 hemipGBIF <- subset(hemipGBIF, taxonRank == "SPECIES" | taxonRank == "SUBSPECIES")
-save(hemipGBIF, file = "Potato psyllid data/GBIF_Records_Hemiptera.Rdata")
+save(hemipGBIF, file = "data/GBIF_Records_Hemiptera.Rdata")
 
 # Loading Essig Hemiptera records
-hemipEssig <- read.csv("Potato psyllid data/Essig_Hemiptera_Records_2015-08-31.csv", header = TRUE)
+hemipEssig <- read.csv("data/Essig_Hemiptera_Records_2015-08-31.csv", header = TRUE)
 # Georeferenced Essig specimens not in database
-essig.pp.etoh <- read.csv("Potato psyllid data/Essig EtOH potato psyllid specimens georeferenced.csv", header = TRUE)
+essig.pp.etoh <- read.csv("data/Essig EtOH potato psyllid specimens georeferenced.csv", header = TRUE)
 
 #### Combine 2 Essig datasets
 # Select columns, families, and only states of interest for Hemiptera Essig records
@@ -85,13 +83,13 @@ hemipRecords <- hemipRecords[!is.na(hemipRecords$MonthCollected),]
 hemipRecords <- hemipRecords[!is.na(hemipRecords$DecimalLatitude),]
 
 # Save Essig + GBIF Hemiptera records
-save(hemipRecords, file = "Potato psyllid data/Compiled_Hemiptera_Records_2015-08-31.Rdata")
+save(hemipRecords, file = "output/Compiled_Essig-GBIF_Hemiptera_Records.Rdata")
 
 
 #############################################################################
 #### Combining Sterno + Aucheno records from Essig and GBIF with CDFA records
-load("Potato psyllid data/Compiled_Hemiptera_Records_2015-08-31.Rdata")
-CDFArecords <- read.csv("Potato psyllid data/CDFA_Hemiptera_Records.csv", header = TRUE)
+load("output/Compiled_Essig-GBIF_Hemiptera_Records.Rdata")
+CDFArecords <- read.csv("data/CDFA_Hemiptera_Records.csv", header = TRUE)
 
 #### Combine Essig, GBIF, and CDFA records
 # Paratrioza is included in the database; change to Bactericera
@@ -122,18 +120,18 @@ names(CDFArecords) <- names(hemipRecords)
 hemipRecords <- rbind(hemipRecords, CDFArecords)
 dim(hemipRecords)
 # Save database as RDS file
-saveRDS(hemipRecords, file = "Potato psyllid data/Compiled_Hemiptera_records_CDFA-GBIF_2016-01-15.rds")
+saveRDS(hemipRecords, file = "output/Compiled_Hemiptera_records_CDFA-GBIF_2016-01-15.rds")
 
 
 ############################################################################################
 #### Exploring and adding American Museum records
 #### Data sets downloaded by Pete Oboyski for all Hemiptera in California 2016-01-05
-amfiles <- list.files(path="Potato psyllid data/American Museum data sets", full.names = TRUE)
+amfiles <- list.files(path="data/American_museum_data_sets", full.names = TRUE)
 AMrecords <- as.data.frame(rbindlist(lapply(amfiles, function(x) read.delim(x))))
-saveRDS(AMrecords, file = "Potato psyllid data/American Museum data sets/American_Museum_Full_Specimen_Data.rds")
+saveRDS(AMrecords, file = "output/American_Museum_Full_Specimen_Data.rds")
 
 #### Data munging
-AMrecords <- readRDS("Potato psyllid data/American Museum data sets/American_Museum_Full_Specimen_Data.rds")
+AMrecords <- readRDS("output/American_Museum_Full_Specimen_Data.rds")
 # remove NAs from Lat and Genus
 AMrecords$Lat <- as.numeric(levels(AMrecords$Lat))[AMrecords$Lat]
 AMrecords <- AMrecords[!is.na(AMrecords$Lat),]
@@ -170,10 +168,10 @@ AMrecords <- AMrecords[,c("ScientificName", "bnhm_id", "Ordr", "Family",
                           "YearCollected", "MonthCollected", "DayCollected",
                           "Collector", "Associated_Taxon")]
 # Load hemipRecords data set
-hemipRecords <- readRDS("Potato psyllid data/Compiled_Hemiptera_records_CDFA-GBIF_2016-01-15.rds")
+hemipRecords <- readRDS("output/Compiled_Hemiptera_records_CDFA-GBIF_2016-01-15.rds")
 names(AMrecords) <- names(hemipRecords)
-saveRDS(AMrecords, "Potato psyllid data/Compiled_AMNH_Hemiptera_records_2016-01-19.rds")
-write.csv(AMrecords, "Potato psyllid data/Compiled_AMNH_Hemiptera_records_2016-01-19.csv", row.names = FALSE)
+saveRDS(AMrecords, "output/Compiled_AMNH_Hemiptera_records_2016-01-19.rds")
+write.csv(AMrecords, "output/Compiled_AMNH_Hemiptera_records_2016-01-19.csv", row.names = FALSE)
 hemipRecords <- rbind(hemipRecords, AMrecords)
 table(hemipRecords[order(hemipRecords$Family),]$Family)
 # Make Decade column
@@ -182,7 +180,7 @@ hemipRecords <- hemipRecords[order(hemipRecords$Decade),]
 hemipRecords$DecadeFactor <- as.numeric(factor(hemipRecords$Decade))
 
 # Save database as RDS file
-saveRDS(hemipRecords, file = "Potato psyllid data/Compiled_Hemiptera_records_2016-01-19.rds")
+saveRDS(hemipRecords, file = "output/Compiled_Hemiptera_records_2016-01-19.rds")
 
 nrow(hemipRecords[hemipRecords$ScientificName == "Bactericera cockerelli",])
 
@@ -190,13 +188,13 @@ nrow(hemipRecords[hemipRecords$ScientificName == "Bactericera cockerelli",])
 
 ############################################################################################
 #### Exploring records and making maps
-hemipRecords <- readRDS("Potato psyllid data/Compiled_Hemiptera_records_2016-01-15.rds")
+hemipRecords <- readRDS("output/Compiled_Hemiptera_records_2016-01-19.rds")
 # Need to fix dates occurring after 2015 (!), for now just remove them
 hemipRecords <- hemipRecords[hemipRecords$YearCollected >= 1900,]
 hemipRecords <- hemipRecords[hemipRecords$YearCollected <= 2015,]
 # Map Hemiptera records
 # Potato psyllid points are in red
-pdf("Potato psyllid analyses/Figures/Hemip_potato_psyllid_map.pdf")
+pdf("results/figures/Hemip_potato_psyllid_map.pdf")
   map("state", regions = c("california", "nevada", "utah", "arizona"))
   points(hemipRecords$DecimalLongitude, hemipRecords$DecimalLatitude, pch = 1, col = "blue")
   ppindex <- which(hemipRecords$ScientificName == "Bactericera cockerelli")
@@ -224,7 +222,7 @@ ppRecords$Decade <- round(ppRecords$YearCollected, -1)
 ppRecords <- ppRecords[order(ppRecords$Decade),]
 ppRecords$DecadeFactor <- as.numeric(factor(ppRecords$Decade))
 
-tiff("Potato psyllid data/Potato_psyllid_decadal_map.tif")
+tiff("results/figures/Potato_psyllid_decadal_map.tif")
   map("county", regions = c("california"))
   points(ppRecords[ppRecords$StateProvince == "California",]$DecimalLongitude, 
          ppRecords[ppRecords$StateProvince == "California",]$DecimalLatitude,
@@ -243,7 +241,7 @@ caMap <- get_map(location = "California", zoom = 6, maptype = "toner-hybrid")
 cappRecords <- ppRecords[ppRecords$StateProvince == "California",]
 cappMap <-   ggmap(caMap) + geom_point(aes(x = DecimalLongitude, y = DecimalLatitude, col = Decade),
                   data = cappRecords)
-ggsave(filename = "Potato psyllid data/Potato_psyllid_decadal_map3.tiff", cappMap,
+ggsave(filename = "results/figures/Potato_psyllid_decadal_map3.tiff", cappMap,
        #height = 14, width = 12, units = "in", 
        dpi = 600)
 
@@ -277,12 +275,12 @@ caMap <- get_map(location = "California", zoom = 6, maptype = "toner-hybrid")
 calhRecords <- lygus[lygus$StateProvince == "California",]
 calhMap <-   ggmap(caMap) + geom_point(aes(x = DecimalLongitude, y = DecimalLatitude, col = Decade),
                   data = calhRecords)
-ggsave(filename = "Potato psyllid data/lygus_decadal_map.pdf", calhMap,
+ggsave(filename = "results/figures/lygus_decadal_map.pdf", calhMap,
        height = 14, width = 12, units = "in", 
        dpi = 600)
 
 # Histogram of year collected
-pdf("Potato psyllid data/lygus_year_collected_histogram.pdf")
+pdf("results/figures/lygus_year_collected_histogram.pdf")
   hist(calhRecords$YearCollected)
 dev.off()
 
