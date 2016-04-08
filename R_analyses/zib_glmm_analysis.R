@@ -1,4 +1,4 @@
-#### Bayesian GLMM analysis
+#### Zero-inflated (Bayesian) binomial GLMM analysis
 
 #### Preliminaries
 #rm(list = ls())
@@ -36,7 +36,7 @@ cat("
     betap5 ~ dnorm(0, 0.001)
     betap6 ~ dnorm(0, 0.001)
     betap7 ~ dnorm(0, 0.001)
-    #beta8 ~ dnorm(0, 0.001)
+    betap8 ~ dnorm(0, 0.001)
 
     # Likelihood
     for (i in 1:nlist){ # i = events (year-months)
@@ -44,8 +44,8 @@ cat("
         detectionMatrix[i,j] ~ dbern(q[i,j])  # Distribution for random part; observed presences relating to detection probability
         Y[i,j] ~ dbern(p[i,j]) # Occupancy probability
         logit(q[i,j]) <- Y[i,j] + muq + betaq*list_length[i,j] # Logistic regression for detection
-        logit(p[i,j]) <- betap1*year[i,j] + betap2*month[i,j] + betap3*pow(month[i,j],2) + # Grand mean, year, and month effects
-                          # beta4*list_length[i,j] + # List length effect
+        logit(p[i,j]) <- betap1*year[i,j] + betap2*pow(year[i,j],2) + # Year quadratic effects
+                          betap2*month[i,j] + betap3*pow(month[i,j],2) + # month quadratic effects
                           betap4*aet[i,j] + betap5*cwd[i,j] + betap6*tmn[i,j] + betap7*tmx[i,j] + # Climate effects
 			  alpha[j] # Random effects
       } #j
@@ -68,16 +68,16 @@ inits <- function() list(mu.alpha = runif(1, -3, 3),
                          betap4 = runif(1, -3, 3),
                          betap5 = runif(1, -3, 3),
                          betap6 = runif(1, -3, 3),
-                         betap7 = runif(1, -3, 3))#,
-                         #beta8 = runif(1, -3, 3))
+                         betap7 = runif(1, -3, 3),
+                         beta8 = runif(1, -3, 3))
 # Monitored parameters
 params <- c('muq', 'alpha',
-            'betaq', 'betap1', 'betap2', 'betap3', 'betap4', 'betap5', 'betap6', 'betap7')
+            'betaq', 'betap1', 'betap2', 'betap3', 'betap4', 'betap5', 'betap6', 'betap7', 'betap8')
             #, 'beta8', 'alpha')
 # MCMC specifications
-ni=102000; nt=10; nc=3
+ni=81000; nt=10; nc=3
 # for jags.parfit(), burn-in iterations = n.adapt + n.update
-n.adapt <- 1000; n.update <- 1000
+n.adapt <- 500; n.update <- 500
 nb <- n.adapt + n.update
 
 
@@ -104,10 +104,10 @@ glmmOutput <- jags.parfit(cl, data = jagsGLMMdata,
 date()
 stopCluster(cl) # Close the cluster
 #### Compute statistics and save output
-saveRDS(glmmOutput, file = "climate_glmm_jags_out_full.rds")
+saveRDS(glmmOutput, file = "zib_glmm_jags_out_full.rds")
 glmmdctab <- dctable(glmmOutput)
 glmmResults <- data.frame(rbindlist(glmmdctab))
 row.names(glmmResults) <- names(glmmdctab)
-saveRDS(glmmResults, file = "climate_glmm_jags_out_params.rds")
+saveRDS(glmmResults, file = "zib_glmm_jags_out_params.rds")
 print("SUCCESS!")
 
