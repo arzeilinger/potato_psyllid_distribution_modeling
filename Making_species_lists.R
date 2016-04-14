@@ -132,7 +132,7 @@ Records$tmnYear <- Records %>% with(., ifelse(MonthCollected >= 1 & MonthCollect
 # This ensures that the temperature occurred prior to when the insects were collected.
 Records$tmxYear <- Records$YearCollected - 1
 
-Records <- subset(Records, YearCollected >= 1900)
+Records <- subset(Records, tmxYear >= 1900)
 # First, extract monthly aet and cwd data
 Records <- Records %>% extractClimateMonthly(., colNames = c("DecimalLongitude", "DecimalLatitude", "YearCollected", "MonthCollected"),
                                              fac = c("aet", "cwd"), cdir = cdir) %>%
@@ -151,7 +151,7 @@ Records <- Records %>% extractClimateMonthly(., colNames = c("DecimalLongitude",
 #PALists <- make_lists(Records, 4)
 AllLists <- make_lists(Records, 1)
 speciesNames <- unique(Records$Species)
-saveRDS(AllLists, file = "output/All_Hemip_Lists_Climate_15km_Cells_2016-03-25.rds")
+saveRDS(AllLists, file = "output/All_Hemip_Lists_Climate_15km_Cells_2016-04-14.rds")
 
 
 ##############################################################################################
