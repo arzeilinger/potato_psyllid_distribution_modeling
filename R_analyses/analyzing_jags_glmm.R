@@ -1,6 +1,7 @@
 #### Analyzing GLMM JAGS output
 
 #### Preliminaries
+rm(list = ls())
 my_packages<-c('data.table', 'lattice', 'akima', 'tidyr', 'RCurl', 'foreign')
 lapply(my_packages, require, character.only=T)
 
@@ -48,9 +49,10 @@ betas <- glmmResults[grep("betap", glmmResults$params), "mean"]
 ## Function to predict potato psyllid occupancy from model results
 # includes site random effects
 predFunc <- function(x){
-  yv <- plogis(betas[1]*x[1] + betas[2]*x[2] + betas[3]*x[2]^2 + # grand mean, year, and month covariates
+  yv <- plogis(betas[1]*x[1] + betas[2]*x[1] + # quadriatic year
+                 betas[3]*x[2] + betas[4]*x[2]^2 + # quadratic month covariates
                  #betas[4]*x[3] + # list length
-                 betas[4]*x[3] + betas[5]*x[4] + betas[6]*x[5] + betas[7]*x[6] + # climate covariates
+                 betas[5]*x[3] + betas[6]*x[4] + betas[7]*x[5] + betas[8]*x[6] + # climate covariates
                  x[7]) # site random effect (alpha)
   return(yv)
 }
@@ -61,14 +63,17 @@ stdxmat <- detectData[,c("stdyear", "stdmonth", "stdaet", "stdcwd", "stdtmn", "s
 detectData$predocc <- apply(stdxmat, 1, predFunc)
 
 # plots
-plot(x = detectData$year, y = detectData$predocc)
+plot(x = detectData$year, y = detectData$detection)
+lines(smooth.spline(detectData$year, detectData$predocc))
+
 plot(x = detectData$aet, y = detectData$predocc)
 plot(x = detectData$tmn, y = detectData$predocc)
 plot(x = detectData$month, y = detectData$predocc)
+lines(smooth.spline(detectData$month, detectData$predocc))
 plot(x = detectData$lnlist_length, y = detectData$predocc)
 
 # trivariate plots with month and year
 zz <- with(detectData, interp(x = year, y = month, z = predocc, duplicate = 'median'))
-pdf("year-month-occupancy_contourplot2.pdf")
+pdf("results/figures/year-month-occupancy_contourplot2.pdf")
   filled.contour(zz, col = topo.colors(32), xlab = "Year", ylab = "Month")
 dev.off()
