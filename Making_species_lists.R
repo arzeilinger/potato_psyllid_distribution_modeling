@@ -16,14 +16,14 @@ source("R_functions/museum_specimen_analysis_functions.R")
 #### Using BCM 2014 raster for Minimum temperature for 11/2000
 #### Resolution of BCM 2014 data = 270 m x 270 m
 #### Rdata file loaded is a list with raster as 1st item, metadata as 2nd item
-Ref_raster_data <- readRDS("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest ProjectClimate data/BCM2014/Rasters/tmn/CA_BCM_HST_Monthly_tmn_2000_11.Rdata")
+Ref_raster_data <- readRDS("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Climate data/BCM2014/Rasters/tmn/CA_BCM_HST_Monthly_tmn_2000_11.Rdata")
 Ref_raster <- Ref_raster_data[[1]]
 nkm <- 15 # Cell dimension, as number of km on a side
 # To get cells 10 km x 10 km, aggregate by 37
 ncells <- round(3.703704*nkm, digits = 0) # Number of cells to aggregate into 1 new cell to get desired cell size
 Ref_raster <- aggregate(Ref_raster, ncells) 
 # Need to redefine extent of BCM raster in terms of lat and long 
-dem <- raster("Climate data/ca_270m_t6.asc")
+dem <- raster("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Climate data/ca_270m_t6.asc")
 extent(Ref_raster) <- extent(dem)
 
 #### Load data
@@ -113,23 +113,34 @@ Records <- Records[which(Records$ScientificName %in% goodNames),]
 #### Add climate data from BCM 2014 rasters
 ############################################################################
 ## Climate extraction functions
-source("Climate data/Extract_climate_data_functions.R")
+source("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Climate data/Extract_climate_data_functions.R")
 cdir <- "C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Climate data/BCM2014/Rasters"
 
-# Note: For annual Tmin and Tmax, I'm using water year summaries.
-# I should extract the Tmin and Tmax of the previous water year from the year the collection was made.
-# This ensures that the temperature occurred prior to when the insects were collected.
+#### Note: For annual Tmin and Tmax, I'm using water year summaries.
+# Water years run from Oct 1 of the previous year to Sept 30 of the current year.
+
+#### For Tmin: 
+# Assume that the minimum occurred in Jan or Feb.
+# I should extract the Tmin of the previous winter from when the collection was made.
+# If the record was collected between Jan and Sept (month = 1:9), extract the annual min of the year collected.
+# If the record was collected between Oct and Dec (month = 10:12), extract the annual min from the year previous to the year collected.
+Records$tmnYear <- Records %>% with(., ifelse(MonthCollected >= 1 & MonthCollected <= 9, YearCollected, YearCollected - 1))
+
+#### For Tmax:
+# Assume that the max occurred in July, August, or September
 # Make a column of t-1 where t = YearCollected
-Records$YearCollectedm1 <- Records$YearCollected - 1
-Records <- subset(Records, YearCollectedm1 >= 1900)
+# This ensures that the temperature occurred prior to when the insects were collected.
+Records$tmxYear <- Records$YearCollected - 1
+
+Records <- subset(Records, YearCollected >= 1900)
 # First, extract monthly aet and cwd data
 Records <- Records %>% extractClimateMonthly(., colNames = c("DecimalLongitude", "DecimalLatitude", "YearCollected", "MonthCollected"),
                                              fac = c("aet", "cwd"), cdir = cdir) %>%
                    # Second, extract annual min summary of tmn data, for year previous to YearCollected
-                   extractClimateAnnually(., colNames = c("DecimalLongitude", "DecimalLatitude", "YearCollectedm1"),
+                   extractClimateAnnually(., colNames = c("DecimalLongitude", "DecimalLatitude", "tmnYear"),
                                           fac = c("tmn"), summaryType = "min", cdir = cdir) %>%
                    # Third, extract annual max summary of tmx data, for year previous to YearCollected
-                   extractClimateAnnually(., colNames = c("DecimalLongitude", "DecimalLatitude", "YearCollectedm1"),
+                   extractClimateAnnually(., colNames = c("DecimalLongitude", "DecimalLatitude", "tmxYear"),
                                           fac = c("tmx"), summaryType = "max", cdir = cdir)
 
 
