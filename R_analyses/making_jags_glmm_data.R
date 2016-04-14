@@ -7,15 +7,14 @@ rm(list = ls())
 my_packages<-c('data.table', 'tidyr', 'lattice', 'dplyr')
 lapply(my_packages, require, character.only=T)
 
-## Set working directory and load Occupancy functions
-setwd("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Potato psyllid")
-source("C:/Users/Adam/Documents/GitHub/potato_psyllid_distribution_modeling/museum_specimen_analysis_functions.R")
+## load functions
+source("R_functions/museum_specimen_analysis_functions.R")
 
 # Load species lists data set with climate data 
-AllLists <- readRDS("Potato psyllid data/All_Hemip_Lists_Climate_15km_Cells_2016-03-25.rds")
+AllLists <- readRDS("output/All_Hemip_Lists_Climate_15km_Cells_2016-04-14.rds")
 
 # Collectors of potato psyllids, from RawRecords data set in making_species_lists
-ppCollectors <- readRDS("Potato psyllid data/potato_psyllid_collectors.rds")
+ppCollectors <- readRDS("output/potato_psyllid_collectors.rds")
 
 # Keep only long lists (ll >= 3)
 longLists <- AllLists %>% rbindlist() %>% as.data.frame() %>% make_lists(., min.list.length = 4)
@@ -32,6 +31,10 @@ detectData <- dplyr::filter(detectData, !is.na(aet) & !is.na(cwd) & !is.na(tmn) 
 detectData$lnlist_length <- log(detectData$list_length)
 str(detectData)
 
+#### Exploring intercorrelations among climate variables
+climateVars <- detectData[,c("aet", "cwd", "tmn", "tmx")]
+pairs(climateVars)
+
 # standardize numeric covariates, include as new variables in data frame
 covars <- c("year", "month", "lnlist_length", "aet", "cwd", "tmn", "tmx")
 covars.i <- as.numeric(sapply(covars, function(x) which(names(detectData) == x), simplify = TRUE))
@@ -43,8 +46,7 @@ for(i in covars.i){
 }
 
 # Save detectData
-saveRDS(detectData, file = "potato_psyllid_detection_dataset.rds")
-saveRDS(detectData, file = "C:/Users/Adam/Documents/GitHub/potato_psyllid_distribution_modeling/GLM/potato_psyllid_detection_dataset.rds")
+saveRDS(detectData, file = "output/potato_psyllid_detection_dataset.rds")
 
 # Just potato psyllid occurrences
 ppData <- detectData[detectData$detection == 1,]
@@ -65,8 +67,7 @@ jagsGLMMdata <- list(detectionMatrix = detectionMatrix,
                      tmx = jagsData$stdtmx,
                      nlist = nrow(detectionMatrix),
                      nsite = ncol(detectionMatrix))
-saveRDS(jagsGLMMdata, file = "Potato psyllid data/Data_JAGS_GLMM.rds")
-saveRDS(jagsGLMMdata, file = "C:/Users/Adam/Documents/GitHub/potato_psyllid_distribution_modeling/GLM/Data_JAGS_GLMM.rds")
+saveRDS(jagsGLMMdata, file = "output/Data_JAGS_GLMM.rds")
 
 # Generate test data, a subset of full data set, to make sure model runs
 # testData <- detectData[1:100,]
