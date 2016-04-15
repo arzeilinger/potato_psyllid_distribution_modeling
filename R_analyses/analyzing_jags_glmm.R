@@ -53,6 +53,7 @@ betas <- glmmResults[grep("beta", glmmResults$params), "mean"]
 detectData$month2 <- detectData$stdmonth^2
 detectData$llyr <- detectData$stdlnlist_length*detectData$stdyear
 covars <- c("stdyear", "stdmonth", "month2", "stdlnlist_length", "llyr", "stdaet", "stdtmn", "stdtmx", "siteAlpha")
+
 detectData$predOcc <- predFunc(betas = betas, covars = covars)
 
 
@@ -70,6 +71,6 @@ plot(x = detectData$lnlist_length, y = detectData$predOcc)
 
 # trivariate plots with month and year
 zz <- with(detectData, interp(x = year, y = month, z = predOcc, duplicate = 'median'))
-pdf("results/figures/year-month-occupancy_contourplot2.pdf")
+pdf("results/figures/year-month-occupancy_contourplot_cil.pdf")
   filled.contour(zz, col = topo.colors(32), xlab = "Year", ylab = "Month")
 dev.off()
