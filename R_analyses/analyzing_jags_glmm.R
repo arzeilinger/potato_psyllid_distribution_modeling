@@ -8,7 +8,7 @@ lapply(my_packages, require, character.only=T)
 source("R_functions/museum_specimen_analysis_functions.R")
 
 ## Load JAGS model coefficient estimates from GitHub
-url <- "https://raw.githubusercontent.com/arzeilinger/potato_psyllid_distribution_modeling/master/GLM/climate_glmm_params.csv"
+url <- "https://raw.githubusercontent.com/arzeilinger/potato_psyllid_distribution_modeling/master/output/climate_glmm_params.csv"
 glmmResults <- getURL(url) %>% textConnection() %>% read.csv(., header = TRUE)
 glmmResults[grep("beta", glmmResults$params),]
 
@@ -22,6 +22,7 @@ glmmResults$params <- row.names(glmmResults)
 # Covariate results
 glmmResults[grep("beta", glmmResults$params),]
 write.csv(glmmResults, file = "output/climate_glmm_params.csv", row.names = FALSE)
+
 
 ## load detection dataset from GitHub
 url <- "https://raw.githubusercontent.com/arzeilinger/potato_psyllid_distribution_modeling/master/output/potato_psyllid_detection_dataset.csv"
