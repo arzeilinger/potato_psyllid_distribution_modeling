@@ -49,6 +49,21 @@ makeEcoDataMatrix <- function(var, data = detectData, fill = NA){
 }
 
 
+## Function to predict potato psyllid occupancy from model results
+# includes site random effects
+predFunc <- function(betas = betas, covars = covars, data = detectData){
+  # betas are a vector of coefficient estimates from the models
+  # covars are a list of column names of covariates from the data set
+  # must square any quadratic terms and multiply any interactions first, an include as separate columns
+  # covariate names must be in correct order
+  # assuming that the model includes random site effects, which are included as the last column of the covariate matrix
+  betasf <- c(betas, 1) # The additional "1" is for the random site effects 
+  xmat <- data[,covars]
+  yv <- plogis(betasf %*% t(xmat)) # inner product of betas and covariates
+  return(t(yv))
+}
+
+
 ################################################################################################################
 #### Functions for analysis of count data with N-mixture model or Poisson GLM
 
