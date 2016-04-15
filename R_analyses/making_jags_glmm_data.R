@@ -49,6 +49,7 @@ for(i in covars.i){
 
 # Save detectData
 saveRDS(detectData, file = "output/potato_psyllid_detection_dataset.rds")
+write.csv(detectData, file = "output/potato_psyllid_detection_dataset.csv", row.names = FALSE)
 
 # Just potato psyllid occurrences
 ppData <- detectData[detectData$detection == 1,]

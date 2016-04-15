@@ -21,6 +21,7 @@ names(glmmResults) <- c("mean", "cil", "ciu", "rhat")
 glmmResults$params <- row.names(glmmResults)
 # Covariate results
 glmmResults[grep("beta", glmmResults$params),]
+write.csv(glmmResults, file = "output/climate_glmm_params.csv", row.names = FALSE)
 
 ## load detection dataset from GitHub
 url <- "https://raw.githubusercontent.com/arzeilinger/potato_psyllid_distribution_modeling/master/output/potato_psyllid_detection_dataset.csv"
@@ -32,6 +33,10 @@ str(detectData)
 ##################################################################################
 #### Model predictions
 ## Joining random effects (alphas) to detection dataset
+
+# If the parameter output includes mu.alpha, need to change the name for the following code to work
+glmmResults[glmmResults$params == "mu.alpha", "params"] <- "mu"
+
 # Make a data.frame that links the alpha estimate to the cellID, sorting the cellIDs is critical! 
 siteRE <- data.frame(alpha = glmmResults[grep("alpha", glmmResults$params), "mean"],
                      cellID = sort(unique(detectData$cellID)))
@@ -71,6 +76,6 @@ plot(x = detectData$lnlist_length, y = detectData$predOcc)
 
 # trivariate plots with month and year
 zz <- with(detectData, interp(x = year, y = month, z = predOcc, duplicate = 'median'))
-pdf("results/figures/year-month-occupancy_contourplot_cil.pdf")
+pdf("results/figures/year-month-occupancy_contourplot.pdf")
   filled.contour(zz, col = topo.colors(32), xlab = "Year", ylab = "Month")
 dev.off()
