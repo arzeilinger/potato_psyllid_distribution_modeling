@@ -18,14 +18,14 @@ cat("
     
     # For the site random effect
     for(j in 1:nsite) { 
-      alpha[j] ~ dnorm(mu.alpha, tau.alpha) 
+      alpha[j] ~ dnorm(0, tau.alpha) 
     }
-    mu.alpha ~ dnorm(0, 0.001)
+    #mu.alpha ~ dnorm(0, 0.001)
     tau.alpha <- 1 / (sigma.alpha * sigma.alpha)
     sigma.alpha ~ dunif(0, 5)
     
     # Grand mean
-    mu ~ dnorm(0, 0.01)
+    #mu ~ dnorm(0, 0.01)
 
     # For the fixed effect coefficients
     beta1 ~ dnorm(0, 0.001)
@@ -41,10 +41,10 @@ cat("
     for (i in 1:nlist){ # i = events (year-months)
       for(j in 1:nsite) { # j = sites
         detectionMatrix[i,j] ~ dbern(p[i,j])  # Distribution for random part
-        logit(p[i,j]) <- mu + beta1*year[i,j] + beta2*month[i,j] + beta3*pow(month[i,j],2) +
-                          beta4*list_length[i,j] + 
-                          beta5*aet[i,j] + beta6*cwd[i,j] + beta7*tmn[i,j] + beta8*tmx[i,j] +
-			  alpha[j]
+        logit(p[i,j]) <- beta1*year[i,j] + beta2*month[i,j] + beta3*pow(month[i,j],2) + # Year and month effects
+                          beta4*list_length[i,j] + beta5*list_length[i,j]*year[i,j] + # List length effects
+                          beta6*aet[i,j] + beta7*tmn[i,j] + beta8*tmx[i,j] + # Climate effects
+			                    alpha[j] # Site random effects
       } #j
     } #i
     }",fill = TRUE)
@@ -55,10 +55,8 @@ sink()
 #### Specifications of JAGS run
 # Initial values
 # Specify initial values for mu.alpha, sigma.alpha, and beta1
-inits <- function() list(mu.alpha = runif(1, -3, 3),
-                         sigma.alpha = runif(1, 0, 5),
-                         mu = runif(1, -3, 3),
-			 beta1 = runif(1, -3, 3),
+inits <- function() list(sigma.alpha = runif(1, 0, 5),
+                         beta1 = runif(1, -3, 3),
                          beta2 = runif(1, -3, 3),
                          beta3 = runif(1, -3, 3),
                          beta4 = runif(1, -3, 3),
@@ -67,7 +65,7 @@ inits <- function() list(mu.alpha = runif(1, -3, 3),
                          beta7 = runif(1, -3, 3),
                          beta8 = runif(1, -3, 3))
 # Monitored parameters
-params <- c('mu', 'beta1', 'beta2', 'beta3', 'beta4', 'beta5', 'beta6', 'beta7', 'beta8', 'alpha')
+params <- c('beta1', 'beta2', 'beta3', 'beta4', 'beta5', 'beta6', 'beta7', 'beta8', 'alpha')
 # MCMC specifications
 ni=81000; nt=10; nc=3
 # for jags.parfit(), burn-in iterations = n.adapt + n.update
@@ -104,4 +102,3 @@ glmmResults <- data.frame(rbindlist(glmmdctab))
 row.names(glmmResults) <- names(glmmdctab)
 saveRDS(glmmResults, file = "climate_glmm_jags_out_params.rds")
 print("SUCCESS!")
-
