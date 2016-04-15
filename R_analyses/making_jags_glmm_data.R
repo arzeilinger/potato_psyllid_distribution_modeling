@@ -34,6 +34,8 @@ str(detectData)
 #### Exploring intercorrelations among climate variables
 climateVars <- detectData[,c("aet", "cwd", "tmn", "tmx")]
 pairs(climateVars)
+# CWD is highly correlated with AET, probably should drop CWD
+
 
 # standardize numeric covariates, include as new variables in data frame
 covars <- c("year", "month", "lnlist_length", "aet", "cwd", "tmn", "tmx")
