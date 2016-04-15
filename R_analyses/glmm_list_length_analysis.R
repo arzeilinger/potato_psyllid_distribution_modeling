@@ -6,9 +6,8 @@ rm(list = ls())
 my_packages<-c('lme4', 'lmerTest', 'data.table', 'tidyr', 'lattice', 'dplyr', 'bbmle', 'optimx')
 lapply(my_packages, require, character.only=T)
 
-## Set working directory and load Occupancy functions
-setwd("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Potato psyllid")
-source("C:/Users/Adam/Documents/GitHub/potato_psyllid_distribution_modeling/museum_specimen_analysis_functions.R")
+## Load functions
+source("R_functions/museum_specimen_analysis_functions.R")
 
 # Load species lists data set with climate data 
 AllLists <- readRDS("Potato psyllid data/All_Hemip_Lists_Climate_15km_Cells_2016-03-25.rds")
