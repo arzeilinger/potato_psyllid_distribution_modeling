@@ -2,7 +2,8 @@
 
 #### Preliminaries
 rm(list = ls())
-my_packages<-c('data.table', 'lattice', 'akima', 'tidyr', 'RCurl', 'foreign')
+my_packages<-c('data.table', 'lattice', 'akima', 'tidyr', 'RCurl', 'foreign',
+               'raster')
 lapply(my_packages, require, character.only=T)
 
 source("R_functions/museum_specimen_analysis_functions.R")
@@ -12,7 +13,7 @@ url <- "https://raw.githubusercontent.com/arzeilinger/potato_psyllid_distributio
 glmmResults <- getURL(url) %>% textConnection() %>% read.csv(., header = TRUE)
 glmmResults[grep("beta", glmmResults$params),]
 
-#### Analyzing ZIB GLMM model output
+#### Analyzing GLMM model output
 
 ## Load JAGS coefficient estimates from local folder
 glmmResults <- readRDS("output/climate_glmm_jags_out_params.rds")
@@ -30,13 +31,14 @@ detectData <- getURL(url) %>% textConnection() %>% read.csv(., header = TRUE)
 ## Load detection dataset from local folder
 detectData <- readRDS("output/potato_psyllid_detection_dataset.rds")
 str(detectData)
+table(detectData$detection)
 
 ##################################################################################
 #### Model predictions
 ## Joining random effects (alphas) to detection dataset
 
 # If the parameter output includes mu.alpha, need to change the name for the following code to work
-glmmResults[glmmResults$params == "mu.alpha", "params"] <- "mu"
+#glmmResults[glmmResults$params == "mu.alpha", "params"] <- "mu"
 
 # Make a data.frame that links the alpha estimate to the cellID, sorting the cellIDs is critical! 
 siteRE <- data.frame(alpha = glmmResults[grep("alpha", glmmResults$params), "mean"],
@@ -58,12 +60,15 @@ betas <- glmmResults[grep("beta", glmmResults$params), "mean"]
 # Setup all covariates, including quadratic and interaction
 detectData$month2 <- detectData$stdmonth^2
 detectData$llyr <- detectData$stdlnlist_length*detectData$stdyear
-covars <- c("stdyear", "stdmonth", "month2", "stdlnlist_length", "llyr", "stdaet", "stdtmn", "stdtmx", "siteAlpha")
+covars <- c("stdyear", "stdmonth", "month2", "stdlnlist_length", "llyr", "stdaet", "stdtmn", "stdtmx", "stdcwd", "siteAlpha")
 
 detectData$predOcc <- predFunc(betas = betas, covars = covars)
 
 
-# plots
+##############################################################################################
+#### Plots of Results
+
+# preliminary plots
 plot(x = detectData$year, y = detectData$detection)
 lines(smooth.spline(detectData$year, detectData$predOcc))
 
@@ -77,6 +82,11 @@ plot(x = detectData$lnlist_length, y = detectData$predOcc)
 
 # trivariate plots with month and year
 zz <- with(detectData, interp(x = year, y = month, z = predOcc, duplicate = 'median'))
-pdf("results/figures/year-month-occupancy_contourplot.pdf")
+pdf("results/figures/year-month-occupancy_contourplot_bayesian_glmm.pdf")
   filled.contour(zz, col = topo.colors(32), xlab = "Year", ylab = "Month")
 dev.off()
+
+
+####################################################################################
+#### Raster maps of occupancy probability
+

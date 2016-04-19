@@ -43,10 +43,10 @@ cat("
       for(j in 1:nsite) { # j = sites
         detectionMatrix[i,j] ~ dbern(q[i,j])  # Distribution for random part; observed presences relating to detection probability
         Y[i,j] ~ dbern(p[i,j]) # Occupancy probability
-        logit(q[i,j]) <- Y[i,j] + muq + betaq*list_length[i,j] # Logistic regression for detection
-        logit(p[i,j]) <- betap1*year[i,j] + betap2*pow(year[i,j],2) + # Year quadratic effects
+        logit(q[i,j]) <- Y[i,j] + muq + betaq1*list_length[i,j] + betaq2*list_length*year # Logistic regression for detection
+        logit(p[i,j]) <- betap1*year[i,j] + # Year effect
                           betap2*month[i,j] + betap3*pow(month[i,j],2) + # month quadratic effects
-                          betap4*aet[i,j] + betap5*cwd[i,j] + betap6*tmn[i,j] + betap7*tmx[i,j] + # Climate effects
+                          betap4*aet[i,j] + + betap5*tmn[i,j] + betap6*tmx[i,j] + # Climate effects
 			  alpha[j] # Random effects
       } #j
     } #i

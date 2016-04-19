@@ -7,9 +7,8 @@ my_packages<-c('lme4', 'lmerTest', 'data.table', 'tidyr', 'lattice', 'dplyr', 'b
                'detect', 'optimx')
 lapply(my_packages, require, character.only=T)
 
-## Set working directory and load Occupancy functions
-setwd("C:/Users/Adam/Documents/GitHub/potato_psyllid_distribution_modeling")
-source("museum_specimen_analysis_functions.R")
+## load functions
+source("R_functions/museum_specimen_analysis_functions.R")
 
 # Load species lists data set with climate data 
 AllLists <- readRDS("abundance_modeling/All_Hemip_Counts_Climate_15km_Cells_2016-02-26.rds")

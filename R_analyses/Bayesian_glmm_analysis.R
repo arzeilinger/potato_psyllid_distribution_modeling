@@ -18,9 +18,9 @@ cat("
     
     # For the site random effect
     for(j in 1:nsite) { 
-      alpha[j] ~ dnorm(0, tau.alpha) 
+      alpha[j] ~ dnorm(mu.alpha, tau.alpha) 
     }
-    #mu.alpha ~ dnorm(0, 0.001)
+    mu.alpha ~ dnorm(0, 0.001)
     tau.alpha <- 1 / (sigma.alpha * sigma.alpha)
     sigma.alpha ~ dunif(0, 5)
     
@@ -36,6 +36,7 @@ cat("
     beta6 ~ dnorm(0, 0.001)
     beta7 ~ dnorm(0, 0.001)
     beta8 ~ dnorm(0, 0.001)
+    beta9 ~ dnorm(0, 0.001)
 
     # Likelihood
     for (i in 1:nlist){ # i = events (year-months)
@@ -43,7 +44,7 @@ cat("
         detectionMatrix[i,j] ~ dbern(p[i,j])  # Distribution for random part
         logit(p[i,j]) <- beta1*year[i,j] + beta2*month[i,j] + beta3*pow(month[i,j],2) + # Year and month effects
                           beta4*list_length[i,j] + beta5*list_length[i,j]*year[i,j] + # List length effects
-                          beta6*aet[i,j] + beta7*tmn[i,j] + beta8*tmx[i,j] + # Climate effects
+                          beta6*aet[i,j] + beta7*tmn[i,j] + beta8*tmx[i,j] + beta9*cwd[i,j] + # Climate effects
 			                    alpha[j] # Site random effects
       } #j
     } #i
@@ -55,7 +56,8 @@ sink()
 #### Specifications of JAGS run
 # Initial values
 # Specify initial values for mu.alpha, sigma.alpha, and beta1
-inits <- function() list(sigma.alpha = runif(1, 0, 5),
+inits <- function() list(mu.alpha = runif(1, -3, 3),
+                         sigma.alpha = runif(1, 0, 5),
                          beta1 = runif(1, -3, 3),
                          beta2 = runif(1, -3, 3),
                          beta3 = runif(1, -3, 3),
@@ -63,11 +65,12 @@ inits <- function() list(sigma.alpha = runif(1, 0, 5),
                          beta5 = runif(1, -3, 3),
                          beta6 = runif(1, -3, 3),
                          beta7 = runif(1, -3, 3),
-                         beta8 = runif(1, -3, 3))
+                         beta8 = runif(1, -3, 3),
+                         beta9 = runif(1, -3, 3))
 # Monitored parameters
-params <- c('beta1', 'beta2', 'beta3', 'beta4', 'beta5', 'beta6', 'beta7', 'beta8', 'alpha')
+params <- c('beta1', 'beta2', 'beta3', 'beta4','beta5', 'beta6', 'beta7', 'beta8', 'beta9', 'alpha')
 # MCMC specifications
-ni=81000; nt=10; nc=3
+ni=101000; nt=10; nc=3
 # for jags.parfit(), burn-in iterations = n.adapt + n.update
 n.adapt <- 500; n.update <- 500
 nb <- n.adapt + n.update

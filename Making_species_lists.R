@@ -38,10 +38,19 @@ hemipRecords <- readRDS("output/Compiled_Hemiptera_records_2016-01-19.rds")
 # hb <- hemipRecords[hemipRecords$ScientificName == "Murgantia histrionica",] # harlequin bug; 360 records
 # blackscale <- hemipRecords[hemipRecords$ScientificName == "Saissetia oleae",] # black scale; 93 records
 # redscale <- hemipRecords[hemipRecords$ScientificName == "Aonidiella aurantii",]
-# # Remove carnivorous and aquatic Heteropteran families
-# table(hemipRecords$Family)
-# write.csv(unique(hemipRecords$Family), file = "Potato psyllid/Potato psyllid data/Collected_Hemiptera_Families.csv", row.names = FALSE)
 
+#### Potato psyllids and associated host plants
+pp <- hemipRecords[hemipRecords$ScientificName == "Bactericera cockerelli",]
+hostPlants <- unique(pp$Associated_Taxon)
+hostPlants[grep("Solanum", hostPlants)] # 9 associated Solanum species
+sd <- pp[grep("dulcamara", pp$Associated_Taxon),] # No records of Solanum dulcamara
+
+# #### Spittlebugs; superfamily Cercopoidea
+# spittleFamilies <- c("Cercopidae", "Aphrophoridae", "Clastopteridae", "Epipyidae", "Machaerotidae")
+# spittlebug <- as.data.frame(rbindlist(lapply(spittleFamilies, function(x) hemipRecords[hemipRecords$Family == x,])))
+# write.csv(spittlebug, file = "output/spittlebug_museum_records_2016-04-15.csv", row.names = FALSE)
+
+# # Remove carnivorous and aquatic Heteropteran families
 # List of non-herbivorous families (predaceous, paristic, and aquatic)
 noherbFamilies <- c("Reduviidae", "Geocoridae", "Nabidae", "Cimicidae", "Pieidae",
                     "Phymatidae", "Anthocoridae", "Polyctenidae", "Mesoveliidae",

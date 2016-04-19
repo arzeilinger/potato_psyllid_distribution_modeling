@@ -17,13 +17,13 @@ AllLists <- readRDS("output/All_Hemip_Lists_Climate_15km_Cells_2016-04-14.rds")
 ppCollectors <- readRDS("output/potato_psyllid_collectors.rds")
 
 # Keep only long lists (ll >= 3)
-longLists <- AllLists %>% rbindlist() %>% as.data.frame() %>% make_lists(., min.list.length = 4)
+longLists <- AllLists %>% rbindlist() %>% as.data.frame() %>% make_lists(., min.list.length = 3)
 longListsDF <- longLists %>% rbindlist() %>% as.data.frame()
 
 # select only lists that contain collectors of potato psyllids
 ppcCollections <- longListsDF[longListsDF$Collector %in% ppCollectors, "collectionID"]
 ppcData <- longListsDF[longListsDF$collectionID %in% ppcCollections,]
-ppcLists <- ppcData %>% make_lists(., min.list.length = 4)
+ppcLists <- ppcData %>% make_lists(., min.list.length = 3)
 
 # Transform to data frame with pp detection
 detectData <- detectDataFunc(ppcLists) 
@@ -33,7 +33,9 @@ str(detectData)
 
 #### Exploring intercorrelations among climate variables
 climateVars <- detectData[,c("aet", "cwd", "tmn", "tmx")]
-pairs(climateVars)
+tiff("results/figures/climate_variables_intercorrelations_plot.tif")
+  pairs(climateVars)
+dev.off()
 # CWD is highly correlated with AET, probably should drop CWD
 
 

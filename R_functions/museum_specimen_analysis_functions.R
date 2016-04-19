@@ -5,7 +5,7 @@ CAUNpolygon <- 'POLYGON((-124.3828 41.994332, -110.979479 41.994332, -110.979479
 
 
 # Function to generate species' lists by splitting a data.frame of records by their collectionIDs
-make_lists <- function(records = NA, min.list.length = 4){
+make_lists <- function(records = NA, min.list.length = 3){
   records_list <- split(records, records$collectionID)
   min_length_lists <- as.numeric(which(unlist(lapply(records_list, function(x) nrow(x) >= min.list.length))))
   records_list <- records_list[unique(min_length_lists)]
