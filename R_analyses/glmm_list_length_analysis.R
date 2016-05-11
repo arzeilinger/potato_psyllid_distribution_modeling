@@ -32,9 +32,9 @@ detectData %>% group_by(cellID) %>% summarise(nvisits = length(cellID))
 #### Looking at models with just list length, year, and month with interactions
 
 # Full model
-glmModFull <- glmer(detection ~ stdlnlist_length + stdyear + stdlnlist_length:stdyear + 
-                      stdmonth + I(stdmonth^2) + 
-                      stdaet + stdcwd + stdtmn + stdtmx + 
+glmModFull <- glmer(detection ~ stdlnlist_length*stdyear + 
+                      stdmonth*stdyear + I(stdmonth^2)*stdyear + 
+                      stdaet + stdtmn + stdtmx + 
                       (1|cellID), 
                   family = "binomial", data = detectData,
                   control = glmerControl(optCtrl = list(method = "spg", maxit = 10000000)))
@@ -43,20 +43,21 @@ summary(glmModFull)
 
 
 # Temporal only model
-glmmTime <- glmer(detection ~ stdlnlist_length + stdyear + stdlnlist_length*stdyear + 
-                    stdmonth + I(stdmonth^2) + 
-                    stdmonth*stdyear + I(stdmonth^2)*stdyear +
+glmmTime <- glmer(detection ~ stdlnlist_length*stdyear + 
+                      stdmonth*stdyear + I(stdmonth^2)*stdyear +
                     (1|cellID), 
                   family = "binomial", data = detectData,
-                  control = glmerControl(optCtrl = list(method = "spg", ftol = 1e-20, maxit = 100000)))
+                  control = glmerControl(optCtrl = list(method = "spg", maxit = 10000000)))
                   #control = glmerControl(optimizer = "bobyqa"))
 AICtab(glmModFull, glmmTime, base = TRUE)
 
-bestModel <- glmModFull
+summary(glmmTime)
+
+bestModel <- glmmTime
 detectData$predOcc <- predict(bestModel, type = "response")
 # trivariate plots with month and year
 zz <- with(detectData, interp(x = year, y = month, z = predOcc, duplicate = 'median'))
-pdf("results/figures/year-month-occupancy_contourplot_glmer.pdf")
+pdf("results/figures/year-month-occupancy_contourplot_time_glmer.pdf")
   filled.contour(zz, col = topo.colors(32), xlab = "Year", ylab = "Month")
 dev.off()
 

@@ -79,8 +79,8 @@ RawRecords$Error <- as.numeric(as.character(RawRecords$MaxErrorInMeters))
 ##### DATA PROCESSING #####
 ## Process species records
 # Remove records with a georeferencing error > 5000; need to keep points without georeference error measurements as 90% of records are NA
-Records <- RawRecords[RawRecords$Error < 5000 | is.na(RawRecords$Error),]
-# Records <- RawRecords
+# Records <- RawRecords[RawRecords$Error < 5000 | is.na(RawRecords$Error),]
+Records <- RawRecords
 # Edit species names
 Records$Species <- gsub(" ", ".", Records$Species)
 # Add important fields for filtering and combining observations
@@ -107,8 +107,6 @@ Records <- subset(Records, YearCollected >= 1900 & YearCollected < 2015)
 Records <- Records[Records$StateProvince == "California",]
 # Remove NAs
 Records <- Records[which(!is.na(Records$cellID) & !is.na(Records$Species)),]
-# Remove duplicate observations that include identical occupancy information 
-Records <- Records[!duplicated(Records[c("Species", "collectionID")]),]
 # Remove bad species names: ones without epithet or "undetermined"
 speciesNames <- unique(Records$ScientificName)
 badNames <- c(speciesNames[grep(" sp.", speciesNames, fixed = TRUE)],
@@ -116,6 +114,12 @@ badNames <- c(speciesNames[grep(" sp.", speciesNames, fixed = TRUE)],
 badNames.i <- which(speciesNames %in% badNames)
 goodNames <- speciesNames[-badNames.i]
 Records <- Records[which(Records$ScientificName %in% goodNames),]
+
+# Keep dataset of replicated Records
+duplRecords <- Records
+
+### Remove duplicate observations that include identical occupancy information 
+Records <- Records[!duplicated(Records[c("Species", "collectionID")]),]
 
 
 ############################################################################
@@ -161,6 +165,43 @@ Records <- Records %>% extractClimateMonthly(., colNames = c("DecimalLongitude",
 AllLists <- make_lists(Records, 1)
 speciesNames <- unique(Records$Species)
 saveRDS(AllLists, file = "output/All_Hemip_Lists_Climate_15km_Cells_2016-04-14.rds")
+
+
+##############################################################################################
+#### Exploring the cleaned data set of duplicated records
+## map of all Hemiptera records, with potato psyllid records in different color
+ppRecords <- duplRecords[duplRecords$Species == "Bactericera.cockerelli",]
+
+tiff("results/figures/all_hemip_records_CAmap.tif")
+  map("state", regions = c("california"))
+  points(duplRecords$DecimalLongitude,
+         duplRecords$DecimalLatitude,
+         pch = 1, col = "grey", cex = 1.8)
+  points(ppRecords$DecimalLongitude,
+         ppRecords$DecimalLatitude,
+         pch = 16, col = "black", cex = 1.8)
+dev.off()
+
+
+## Map of CA raster cells as polygons
+CAcrop <- readWKT(CApolygon)
+CAraster <- crop(Ref_raster, CAcrop)
+CApoly <- rasterToPolygons(CAraster) 
+lists <- Records[!duplicated(Records["collectionID"]),]
+listpp <- Records[Records$Species == "Bactericera.cockerelli",]
+
+tiff("results/figures/CA_polygon.tif")
+  map("state", regions="california")
+  lines(CApoly, lty = 2, col = "grey")
+#   points(lists$DecimalLongitude,
+#          lists$DecmialLatitude,
+#          pch = 1, col = "darkgrey", cex = 1.8)
+#   points(listpp$DecimalLongitude,
+#          listpp$DecimalLatitude,
+#          pch = 16, col = "black", cex = 1.8)
+dev.off()
+
+
 
 
 ##############################################################################################

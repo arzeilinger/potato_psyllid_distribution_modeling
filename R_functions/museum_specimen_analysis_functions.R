@@ -33,6 +33,10 @@ detectDataFunc <- function(spLists, focalSpecies = "Bactericera.cockerelli"){
                            cwd = unlist(lapply(1:length(spLists), function(x) mean(spLists[[x]]$cwd, na.rm = TRUE))),
                            tmn = unlist(lapply(1:length(spLists), function(x) mean(spLists[[x]]$tmn, na.rm = TRUE))),
                            tmx = unlist(lapply(1:length(spLists), function(x) mean(spLists[[x]]$tmx, na.rm = TRUE))),
+                           aetsd = unlist(lapply(1:length(spLists), function(x) sd(spLists[[x]]$aet, na.rm = TRUE))),
+                           cwdsd = unlist(lapply(1:length(spLists), function(x) sd(spLists[[x]]$cwd, na.rm = TRUE))),
+                           tmnsd = unlist(lapply(1:length(spLists), function(x) sd(spLists[[x]]$tmn, na.rm = TRUE))),
+                           tmxsd = unlist(lapply(1:length(spLists), function(x) sd(spLists[[x]]$tmx, na.rm = TRUE))),
                            detection = unlist(lapply(spLists, function(x) as.numeric(any(x$Species == focalSpecies)))))
   detectData$month <- as.numeric(levels(detectData$month))[detectData$month]
   detectData$cellID <- as.numeric(levels(detectData$cellID))[detectData$cellID]

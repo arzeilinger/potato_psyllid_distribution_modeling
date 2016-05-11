@@ -32,7 +32,7 @@ detectData$lnlist_length <- log(detectData$list_length)
 str(detectData)
 
 #### Exploring intercorrelations among climate variables
-climateVars <- detectData[,c("aet", "cwd", "tmn", "tmx")]
+climateVars <- detectData[,c("year", "aet", "cwd", "tmn", "tmx")]
 tiff("results/figures/climate_variables_intercorrelations_plot.tif")
   pairs(climateVars)
 dev.off()
@@ -49,12 +49,16 @@ for(i in covars.i){
   detectData[,stdname.i] <- stdvar.i
 }
 
+# Additional covariates for quadratic effects and interactions
+detectData$stdmonth2 <- detectData$stdmonth^2
+detectData$stdllyr <- detectData$stdlnlist_length*detectData$stdyear
+detectData$stdyrmonth <- detectData$stdyear*detectData$stdmonth
+detectData$stdyrmonth2 <- detectData$stdyear*detectData$stdmonth*detectData$stdmonth
+str(detectData)
+
 # Save detectData
 saveRDS(detectData, file = "output/potato_psyllid_detection_dataset.rds")
 write.csv(detectData, file = "output/potato_psyllid_detection_dataset.csv", row.names = FALSE)
-
-# Just potato psyllid occurrences
-ppData <- detectData[detectData$detection == 1,]
 
 #### Make JAGS data set, with lists as rows (i) and sites as columns (j)
 detectionMatrix <- makeEcoDataMatrix("detection")
@@ -74,18 +78,62 @@ jagsGLMMdata <- list(detectionMatrix = detectionMatrix,
                      nsite = ncol(detectionMatrix))
 saveRDS(jagsGLMMdata, file = "output/Data_JAGS_GLMM.rds")
 
-# Generate test data, a subset of full data set, to make sure model runs
-# testData <- detectData[1:100,]
-# detectionMatrix <- makeEcoDataMatrix("detection", testData)
-# jagsData <- lapply(stdcovars, function(x) makeEcoDataMatrix(x, testData, fill = 0))
-# names(jagsData) <- stdcovars
-# jagsTestdata <- list(detectionMatrix = detectionMatrix,
-#                      year = jagsData$stdyear,
-#                      list_length = jagsData$stdlnlist_length,
-#                      aet = jagsData$stdaet,
-#                      cwd = jagsData$stdcwd,
-#                      tmn = jagsData$stdtmn,
-#                      tmx = jagsData$stdtmx,
-#                      nlist = nrow(detectionMatrix),
-#                      nsite = ncol(detectionMatrix))
-# saveRDS(jagsTestdata, file = "C:/Users/Adam/Documents/GitHub/potato_psyllid_distribution_modeling/GLM/Data_JAGS_GLMM_test.rds")
+
+#### Make list of "flat" data vectors for NIMBLE model
+# make indices
+N <- nrow(detectData)
+nsite <- length(unique(detectData$cellID))
+
+nimbleData <- with(detectData, 
+                   list(N = N,
+                        nsite = nsite,
+                        aet = stdaet,
+                        tmn = stdtmn,
+                        tmx = stdtmx,
+                        year = stdyear,
+                        month = stdmonth,
+                        month2 = stdmonth2,
+                        list_length = stdlnlist_length,
+                        year_list_length = stdllyr,
+                        year_month = stdyrmonth,
+                        year_month2 = stdyrmonth2,
+                        y = detection,
+                        siteID = cellID))
+saveRDS(nimbleData, file = "output/data_nimble_zib.rds")
+
+
+############################################################################################
+#### Figures for lists
+
+#### Histogram of list length
+# Just potato psyllid occurrences
+ppData <- detectData[detectData$detection == 1,]
+
+list_length_histogram <- ggplot(detectData,aes(x=list_length)) + 
+  geom_histogram(fill = "darkgrey", alpha = 1, binwidth = 1) +
+  geom_histogram(data=subset(detectData,detection == 1),fill = "black", alpha = 1, binwidth = 1) +
+  xlab("List length") + ylab("Frequency") + 
+  theme_bw() + 
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        #panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+ggsave(filename = "results/figures/list_length_histogram.tiff", plot = list_length_histogram)
+
+
+#############################################################################################
+#### List-level variation in climate variables
+
+hist(detectData$aetsd)
+hist(detectData$tmnsd)
+hist(detectData$tmxsd)
+
+climatesd <- detectData[,c("aetsd", "tmnsd", "tmxsd")]
+
+for(i in 1:ncol(climatesd)){
+  print(names(climatesd)[i])
+  print(mean(climatesd[,i], na.rm = TRUE))
+  print(median(climatesd[,i], na.rm = TRUE))
+}

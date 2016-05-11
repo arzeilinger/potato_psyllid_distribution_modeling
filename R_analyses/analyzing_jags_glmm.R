@@ -17,9 +17,8 @@ glmmResults[grep("beta", glmmResults$params),]
 
 ## Load JAGS coefficient estimates from local folder
 glmmResults <- readRDS("output/climate_glmm_jags_out_params.rds")
-glmmResults <- glmmResults[,c("mean", "X2.5.", "X97.5.", "r.hat")]
-names(glmmResults) <- c("mean", "cil", "ciu", "rhat")
-glmmResults$params <- row.names(glmmResults)
+glmmResults <- glmmResults[,c("mean", "X2.5.", "X97.5.", "r.hat", "params")]
+names(glmmResults) <- c("mean", "cil", "ciu", "rhat", "params")
 # Covariate results
 glmmResults[grep("beta", glmmResults$params),]
 write.csv(glmmResults, file = "output/climate_glmm_params.csv", row.names = FALSE)
@@ -60,7 +59,11 @@ betas <- glmmResults[grep("beta", glmmResults$params), "mean"]
 # Setup all covariates, including quadratic and interaction
 detectData$month2 <- detectData$stdmonth^2
 detectData$llyr <- detectData$stdlnlist_length*detectData$stdyear
-covars <- c("stdyear", "stdmonth", "month2", "stdlnlist_length", "llyr", "stdaet", "stdtmn", "stdtmx", "stdcwd", "siteAlpha")
+detectData$yrmonth <- detectData$stdyear*detectData$stdmonth
+detectData$yrmonth2 <- detectData$stdyear*detectData$stdmonth*detectData$stdmonth
+
+covars <- c("stdyear", "stdmonth", "month2", "stdlnlist_length", "llyr", "yrmonth", "yrmonth2", "siteAlpha")
+            #"stdaet", "stdtmn", "stdtmx", "stdcwd", "siteAlpha")
 
 detectData$predOcc <- predFunc(betas = betas, covars = covars)
 
@@ -82,7 +85,7 @@ plot(x = detectData$lnlist_length, y = detectData$predOcc)
 
 # trivariate plots with month and year
 zz <- with(detectData, interp(x = year, y = month, z = predOcc, duplicate = 'median'))
-pdf("results/figures/year-month-occupancy_contourplot_bayesian_glmm.pdf")
+pdf("results/figures/year-month-occupancy_contourplot_bayesian_time_glmm.pdf")
   filled.contour(zz, col = topo.colors(32), xlab = "Year", ylab = "Month")
 dev.off()
 
