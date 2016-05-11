@@ -29,6 +29,7 @@ ppcLists <- ppcData %>% make_lists(., min.list.length = 3)
 detectData <- detectDataFunc(ppcLists) 
 detectData <- dplyr::filter(detectData, !is.na(aet) & !is.na(cwd) & !is.na(tmn) & !is.na(tmx))
 detectData$lnlist_length <- log(detectData$list_length)
+detectData$season <- detectData$season %>% as.numeric()
 str(detectData)
 
 #### Exploring intercorrelations among climate variables
@@ -40,7 +41,7 @@ dev.off()
 
 
 # standardize numeric covariates, include as new variables in data frame
-covars <- c("year", "month", "lnlist_length", "aet", "cwd", "tmn", "tmx")
+covars <- c("year", "season", "lnlist_length", "aet", "cwd", "tmn", "tmx")
 covars.i <- as.numeric(sapply(covars, function(x) which(names(detectData) == x), simplify = TRUE))
 for(i in covars.i){
   var.i <- names(detectData)[i]
@@ -50,10 +51,10 @@ for(i in covars.i){
 }
 
 # Additional covariates for quadratic effects and interactions
-detectData$stdmonth2 <- detectData$stdmonth^2
+#detectData$stdmonth2 <- detectData$stdmonth^2
 detectData$stdllyr <- detectData$stdlnlist_length*detectData$stdyear
-detectData$stdyrmonth <- detectData$stdyear*detectData$stdmonth
-detectData$stdyrmonth2 <- detectData$stdyear*detectData$stdmonth*detectData$stdmonth
+detectData$stdyrseason <- detectData$stdyear*detectData$stdseason
+#detectData$stdyrmonth2 <- detectData$stdyear*detectData$stdmonth*detectData$stdmonth
 str(detectData)
 
 # Save detectData
@@ -82,7 +83,8 @@ saveRDS(jagsGLMMdata, file = "output/Data_JAGS_GLMM.rds")
 #### Make list of "flat" data vectors for NIMBLE model
 # make indices
 N <- nrow(detectData)
-nsite <- length(unique(detectData$cellID))
+siteID <- detectData$cellID %>% factor(., levels = unique(.)) %>% as.numeric()
+nsite <- detectData$cellID %>% unique() %>% length()
 
 nimbleData <- with(detectData, 
                    list(N = N,
@@ -91,14 +93,12 @@ nimbleData <- with(detectData,
                         tmn = stdtmn,
                         tmx = stdtmx,
                         year = stdyear,
-                        month = stdmonth,
-                        month2 = stdmonth2,
+                        season = stdseason,
                         list_length = stdlnlist_length,
                         year_list_length = stdllyr,
-                        year_month = stdyrmonth,
-                        year_month2 = stdyrmonth2,
+                        year_season = stdyrseason,
                         y = detection,
-                        siteID = cellID))
+                        siteID = siteID))
 saveRDS(nimbleData, file = "output/data_nimble_zib.rds")
 
 
