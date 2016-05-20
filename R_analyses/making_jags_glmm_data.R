@@ -41,7 +41,7 @@ dev.off()
 
 
 # standardize numeric covariates, include as new variables in data frame
-covars <- c("year", "season", "lnlist_length", "aet", "cwd", "tmn", "tmx")
+covars <- c("year", "lnlist_length", "aet", "cwd", "tmn", "tmx")
 covars.i <- as.numeric(sapply(covars, function(x) which(names(detectData) == x), simplify = TRUE))
 for(i in covars.i){
   var.i <- names(detectData)[i]
@@ -53,7 +53,7 @@ for(i in covars.i){
 # Additional covariates for quadratic effects and interactions
 #detectData$stdmonth2 <- detectData$stdmonth^2
 detectData$stdllyr <- detectData$stdlnlist_length*detectData$stdyear
-detectData$stdyrseason <- detectData$stdyear*detectData$stdseason
+#detectData$stdyrseason <- detectData$stdyear*detectData$stdseason
 #detectData$stdyrmonth2 <- detectData$stdyear*detectData$stdmonth*detectData$stdmonth
 str(detectData)
 
@@ -93,14 +93,13 @@ nimbleData <- with(detectData,
                         tmn = stdtmn,
                         tmx = stdtmx,
                         year = stdyear,
-                        season = stdseason,
+                        season = season,
                         list_length = stdlnlist_length,
                         year_list_length = stdllyr,
-                        year_season = stdyrseason,
                         y = detection,
                         siteID = siteID))
 saveRDS(nimbleData, file = "output/data_nimble_zib.rds")
-
+saveRDS(nimbleData, file = "../zib_glmm/data/data_nimble_zib.rds")
 
 ############################################################################################
 #### Figures for lists
