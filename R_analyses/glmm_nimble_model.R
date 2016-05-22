@@ -1,0 +1,194 @@
+#### NIMBLE GLMM model of potato psyllid occupancy
+#### Adapted from code from Daniel Turek
+
+my.packages <- c("nimble", "coda", "lattice", "snow", "snowfall")
+lapply(my.packages, require, character.only = TRUE)
+
+#### Load data set for model fitting
+inputData <- readRDS('output/data_nimble_zib.rds')
+source('R_functions/nimble_definitions.R')
+
+# #### Increasing memory limit for R
+# memory.limit()
+# memory.limit(size = 7000) # Size in Mb
+# memory.limit()
+
+
+#####################################################
+#### Define model in BUGS/NIMBLE language
+
+glmmCode <- nimbleCode({
+    mu_alpha ~ dnorm(0, 0.001)
+    sigma_alpha ~ dunif(0, 1000)
+    for(j in 1:nsite) { 
+        alpha[j] ~ dnorm(mu_alpha, sd = sigma_alpha)  ## site random effect
+    }
+    for(i in 1:6) {
+        beta[i] ~ dnorm(0, 0.001)
+    }
+    for(i in 1:4) {
+        betaseason[i] ~ dnorm(0, 0.001)    ## new fixed effects for each season
+    }
+    for(i in 1:N) {
+        logit(p_occ[i]) <- alpha[siteID[i]] + beta[1]*list_length[i] + beta[2]*year_list_length[i] + 
+          beta[3]*aet[i] + beta[4]*tmn[i] + beta[5]*tmx[i] + beta[6]*year[i] + betaseason[season[i]]
+        y[i] ~ dbin(size = 1, prob = p_occ[i])
+    }
+})
+
+constants <- with(inputData,
+                  list(N=N, nsite=nsite, 
+                       aet=aet, tmn=tmn, tmx=tmx, 
+                       year=year, 
+                       season=season, 
+                       list_length=list_length, 
+                       year_list_length=year_list_length, 
+                       siteID=siteID))
+
+data <- with(inputData, list(y=y))
+
+inits <- list(mu_alpha=0, sigma_alpha=1, alpha=rep(0,inputData$nsite), beta=rep(0,6), betaseason=rep(0,4))
+
+modelInfo_glmm <- list(code=glmmCode, constants=constants, data=data, inits=inits, name='season_model')
+
+
+#### Set up model and samplers
+Rmodel <- nimbleModel(modelInfo_glmm$code,
+                      modelInfo_glmm$constants,
+                      modelInfo_glmm$data,
+                      modelInfo_glmm$inits)
+
+Cmodel <- compileNimble(Rmodel)
+
+spec <- configureMCMC(Rmodel)
+
+#### Best configuration of samplers for random effect occupancy model
+spec$removeSamplers('beta[1:6]')
+spec$addSampler('beta[1:6]', 'RW_block') # linear coefficients
+spec$removeSamplers('sigma_alpha')
+spec$addSampler('sigma_alpha', 'RW_log_shift', list(shiftNodes='alpha')) # random effect sampler
+spec$getSamplers() # Check samplers
+spec$addMonitors('p_occ') # add a monitor to get p_occ in output
+
+#### Compile MCMC in R and C++
+Rmcmc <- buildMCMC(spec)
+Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
+
+
+#### Run MCMC with 150,000 iterations and 50,000 burn-in
+niter <- 150000
+burnin <- 50000
+
+# Function for running MCMC multiple times
+mcmcClusterFunction <- function(x){
+  set.seed(x)
+  Cmcmc$run(niter)
+  samples <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
+  return(samples)
+}
+
+samplesList <- lapply(1:3, mcmcClusterFunction)
+
+# set.seed(1)
+# Cmcmc$run(niter)
+# samples1 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
+# 
+# set.seed(2)
+# Cmcmc$run(niter)
+# samples2 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
+# 
+# set.seed(3)
+# Cmcmc$run(niter)
+# samples3 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
+# 
+# samplesList <- list(samples1, samples2, samples3)
+# 
+# save(samples1, samples2, samples3, file = 'output/MCMC_season.RData')
+
+save(samplesList, file = 'output/MCMC_season_list.RData')
+
+#### Loading saved MCMC run, sames as list, "samplesList"
+load(file = 'output/MCMC_season_list.RData')
+
+
+# ##############################################################################
+# #### Attempt at cluster
+# sfInit(parallel = TRUE, cpus = 2)
+# date()
+# 
+# sfLibrary(nimble)
+# sfExport("Cmcmc", "Rmodel", "niter", "burnin", "mcmcClusterFunction")
+# sfExport("spec")
+# sfExport("Cmodel")
+# sfExport("Rmcmc")
+# sfLapply(1:2, mcmcClusterFunction)
+# 
+# date()
+# sfStop() # Close the cluster
+# #################################################################################
+
+
+
+
+#######################################################################
+#### Assessing convergence and summarizing/plotting results
+#### Assessing convergence of only covariates and mu.alpha. Memory requirements too great to assess for all p_occ[i]
+
+# Make mcmc.list with only covariates and mu.alpha
+mcmcs <- mcmc.list(lapply(1:length(samplesList), function(x) as.mcmc(samplesList[[x]][,1:12])))
+
+## Rhat
+coda::gelman.diag(mcmcs, autoburnin = FALSE)
+## Effective sample size
+effectiveSize(mcmcs)
+
+## Posterior Density Plots
+pdf("results/figures/trace_and_posterior_density_plots.pdf")
+  plot(mcmcs[[1]], ask = FALSE)
+dev.off()
+
+
+#### Posterior Inferences
+#### Mean and 95% Credible intervals
+results <- as.data.frame(cbind(apply(samplesList[[1]], 2, mean),
+                               apply(samplesList[[1]], 2, function(x) quantile(x, 0.025)),
+                               apply(samplesList[[1]], 2, function(x) quantile(x, 0.975))))
+names(results) <- c("mean", "cil", "ciu")
+results$params <- row.names(results)
+results[1:15,] # Coefficient results
+
+#### Plotting P(occupancy) against covariates
+pocc <- results[grep("p_occ", results$params),]
+names(pocc) <- c("mean", "cil", "ciu")
+# Load detection data set
+detectData <- readRDS("../potato_psyllid_distribution_modeling/output/potato_psyllid_detection_dataset.rds")
+detectData$pocc <- pocc$mean
+
+plot(x = detectData$year, y = detectData$pocc)
+plot(x = detectData$list_length, y = detectData$pocc)
+
+xyplot(pocc ~ year|factor(season), data = detectData)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### Wrap Up
+
+##I think this last version of the model (Part II) is our best yet.  The handling of the month variable truly needed to be changed.
+
+##Also, now we see significant effects from a number of the variables, with some nice temporal trends as you had hoped.
+
+##Let me know when you've had a chance to look over this.
+
+##Cheers!  - Daniel
+
