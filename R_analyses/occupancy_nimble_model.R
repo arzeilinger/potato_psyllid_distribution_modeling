@@ -8,10 +8,10 @@ lapply(my.packages, require, character.only = TRUE)
 inputData <- readRDS('output/data_nimble_zib.rds')
 source('R_functions/nimble_definitions.R')
 
-#### Increasing memory limit for R
-memory.limit()
-memory.limit(size = 7000) # Size in Mb
-memory.limit()
+# #### Increasing memory limit for R
+# memory.limit()
+# memory.limit(size = 7000) # Size in Mb
+# memory.limit()
 
 
 #####################################################
@@ -77,47 +77,66 @@ Rmcmc <- buildMCMC(spec)
 Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 
 
-#### Run MCMC with 500,000 iterations and 100,000 burn-in
-niter <- 500000
-burnin <- 100000
+#### Run MCMC with 150,000 iterations and 50,000 burn-in
+niter <- 150000
+burnin <- 50000
 
-# Function for running MCMC multiple times
-mcmcClusterFunction <- function(x){
-  set.seed(x)
-  Cmcmc$run(niter)
-  samples <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
-  return(samples)
-}
+# # Function for running MCMC multiple times
+# mcmcClusterFunction <- function(x){
+#   set.seed(x)
+#   Cmcmc$run(niter)
+#   samples <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
+#   return(samples)
+# }
+# 
+# samplesList <- lapply(1:2, mcmcClusterFunction)
 
-samplesList <- lapply(1:2, mcmcClusterFunction)
+set.seed(1)
+Cmcmc$run(niter)
+samples1 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
 
+set.seed(2)
+Cmcmc$run(niter)
+samples2 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
 
+set.seed(3)
+Cmcmc$run(niter)
+samples3 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
 
-##############################################################################
-#### Attempt at cluster
-sfInit(parallel = TRUE, cpus = 2)
-date()
+samplesList <- list(samples1, samples2, samples3)
 
-sfLibrary(nimble)
-sfExport("Cmcmc", "Rmodel", "niter", "burnin", "mcmcClusterFunction")
-sfExport("spec")
-sfExport("Cmodel")
-sfExport("Rmcmc")
-sfLapply(1:2, mcmcClusterFunction)
+save(samples1, samples2, samples3, file = 'output/MCMC_season.RData')
 
-date()
-sfStop() # Close the cluster
-#################################################################################
-
+save(samplesList, file = 'output/MCMC_season_list.RData')
 
 mcmc1 <- coda::as.mcmc(samplesList[[1]])
 mcmc2 <- coda::as.mcmc(samplesList[[2]])
-mcmcs <- coda::mcmc.list(mcmc1, mcmc2)
+mcmc3 <- coda::as.mcmc(samplesList[[3]])
 
-save(samplesList, mcmcs, file = 'output/MCMC_season.RData')
+mcmcs <- mcmc.list(samplesList)
+
 
 #### Loading saved MCMC run
 load(file = 'output/MCMC_season.RData')
+
+
+# ##############################################################################
+# #### Attempt at cluster
+# sfInit(parallel = TRUE, cpus = 2)
+# date()
+# 
+# sfLibrary(nimble)
+# sfExport("Cmcmc", "Rmodel", "niter", "burnin", "mcmcClusterFunction")
+# sfExport("spec")
+# sfExport("Cmodel")
+# sfExport("Rmcmc")
+# sfLapply(1:2, mcmcClusterFunction)
+# 
+# date()
+# sfStop() # Close the cluster
+# #################################################################################
+
+
 
 
 #######################################################################
