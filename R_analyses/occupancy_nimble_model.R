@@ -81,43 +81,36 @@ Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 niter <- 150000
 burnin <- 50000
 
-# # Function for running MCMC multiple times
-# mcmcClusterFunction <- function(x){
-#   set.seed(x)
-#   Cmcmc$run(niter)
-#   samples <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
-#   return(samples)
-# }
+# Function for running MCMC multiple times
+mcmcClusterFunction <- function(x){
+  set.seed(x)
+  Cmcmc$run(niter)
+  samples <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
+  return(samples)
+}
+
+samplesList <- lapply(1:3, mcmcClusterFunction)
+
+# set.seed(1)
+# Cmcmc$run(niter)
+# samples1 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
 # 
-# samplesList <- lapply(1:2, mcmcClusterFunction)
-
-set.seed(1)
-Cmcmc$run(niter)
-samples1 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
-
-set.seed(2)
-Cmcmc$run(niter)
-samples2 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
-
-set.seed(3)
-Cmcmc$run(niter)
-samples3 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
-
-samplesList <- list(samples1, samples2, samples3)
-
-save(samples1, samples2, samples3, file = 'output/MCMC_season.RData')
+# set.seed(2)
+# Cmcmc$run(niter)
+# samples2 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
+# 
+# set.seed(3)
+# Cmcmc$run(niter)
+# samples3 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
+# 
+# samplesList <- list(samples1, samples2, samples3)
+# 
+# save(samples1, samples2, samples3, file = 'output/MCMC_season.RData')
 
 save(samplesList, file = 'output/MCMC_season_list.RData')
 
-mcmc1 <- coda::as.mcmc(samplesList[[1]])
-mcmc2 <- coda::as.mcmc(samplesList[[2]])
-mcmc3 <- coda::as.mcmc(samplesList[[3]])
-
-mcmcs <- mcmc.list(samplesList)
-
-
-#### Loading saved MCMC run
-load(file = 'output/MCMC_season.RData')
+#### Loading saved MCMC run, sames as list, "samplesList"
+load(file = 'output/MCMC_season_list.RData')
 
 
 # ##############################################################################
@@ -141,16 +134,20 @@ load(file = 'output/MCMC_season.RData')
 
 #######################################################################
 #### Assessing convergence and summarizing/plotting results
+#### Assessing convergence of only covariates and mu.alpha. Memory requirements too great to assess for all p_occ[i]
+
+# Make mcmc.list with only covariates and mu.alpha
+mcmcs <- mcmc.list(lapply(1:length(samplesList), function(x) as.mcmc(samplesList[[x]][,1:12])))
 
 ## Rhat
 coda::gelman.diag(mcmcs, autoburnin = FALSE)
 ## Effective sample size
-apply(samples1, 2, coda::effectiveSize)
+effectiveSize(mcmcs)
 
 ## Posterior Density Plots
-plot(mcmcs[[1]], ask = FALSE)
-for(i in 1:3)
-    plot(coda::as.mcmc(samples1[, (3*i-2):(3*i)]), ask = FALSE)
+pdf("results/figures/trace_and_posterior_density_plots.pdf")
+  plot(mcmcs[[1]], ask = FALSE)
+dev.off()
 
 
 #### Posterior Inferences
@@ -158,6 +155,7 @@ for(i in 1:3)
 results <- as.data.frame(cbind(apply(samplesList[[1]], 2, mean),
                                apply(samplesList[[1]], 2, function(x) quantile(x, 0.025)),
                                apply(samplesList[[1]], 2, function(x) quantile(x, 0.975))))
+names(results) <- c("mean", "cil", "ciu")
 results$params <- row.names(results)
 results[1:15,] # Coefficient results
 
