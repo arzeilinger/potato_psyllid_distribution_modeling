@@ -42,6 +42,19 @@ tsplot <- function(y, ...) plot(x = seq_along(y), y = y, type = 'l', ...)
 
 
 
+#################################################
+#### Function for running MCMC multiple times
+#################################################
+
+
+mcmcClusterFunction <- function(x){
+  set.seed(x)
+  Cmcmc$run(niter)
+  samples <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
+  return(samples)
+}
+
+
 
 ##################################################
 ### RW_shift and RW_shift_log samplers ##########

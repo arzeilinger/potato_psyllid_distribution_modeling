@@ -1,7 +1,7 @@
 #### NIMBLE occupancy model for ZIB GLMM model of potato psyllid occupancy
 #### Originally developed by Daniel Turek
 
-my.packages <- c("nimble", "coda", "lattice", "snow", "snowfall")
+my.packages <- c("nimble", "coda", "lattice", "akima")
 lapply(my.packages, require, character.only = TRUE)
 
 #### Load data set for model fitting
@@ -23,15 +23,15 @@ code <- nimbleCode({
     for(j in 1:nsite) { 
         alpha[j] ~ dnorm(mu_alpha, sd = sigma_alpha)  ## site random effect
     }
-    for(i in 1:7) {
+    for(i in 1:9) {
         beta[i] ~ dnorm(0, 0.001)
     }
-    for(i in 1:4) {
-        betaseason[i] ~ dnorm(0, 0.001)    ## new fixed effects for each season
-        #betaseasonyear[i] ~ dnorm(0, 0.001)
-    }
+    # for(i in 1:4) {
+    #     betaseason[i] ~ dnorm(0, 0.001)    ## new fixed effects for each season
+    #     #betaseasonyear[i] ~ dnorm(0, 0.001)
+    # }
     for(i in 1:N) {
-        logit(p_occ[i]) <- alpha[siteID[i]] + beta[4]*aet[i] + beta[5]*tmn[i] + beta[6]*tmx[i] + beta[7]*year[i] + betaseason[season[i]] #+ betaseasonyear[season[i]]*year[i]
+        logit(p_occ[i]) <- alpha[siteID[i]] + beta[4]*aet[i] + beta[5]*tmn[i] + beta[6]*tmx[i] + beta[7]*year[i] + beta[8]*month[i] + beta[9]*month2[i]
         logit(p_obs[i]) <- beta[1] + beta[2]*list_length[i] + beta[3]*year_list_length[i]
         y[i] ~ dOccupancy(p_occ[i], p_obs[i])
     }
@@ -41,32 +41,33 @@ constants <- with(inputData,
                   list(N=N, nsite=nsite, 
                        aet=aet, tmn=tmn, tmx=tmx, 
                        year=year, 
-                       season=season, 
+                       month=month,
+                       month2=month2,
                        list_length=list_length, 
                        year_list_length=year_list_length, 
                        siteID=siteID))
 
 data <- with(inputData, list(y=y))
 
-inits <- list(mu_alpha=0, sigma_alpha=1, alpha=rep(0,inputData$nsite), beta=rep(0,7), betaseason=rep(0,4))
+inits <- list(mu_alpha=0, sigma_alpha=1, alpha=rep(0,inputData$nsite), beta=rep(0,9))#, betaseason=rep(0,4))
 
-modelInfo_season <- list(code=code, constants=constants, data=data, inits=inits, name='season_model')
+modelInfo_month <- list(code=code, constants=constants, data=data, inits=inits, name='month_model')
 
 
 #### Set up model and samplers
-Rmodel <- nimbleModel(modelInfo_season$code,
-                      modelInfo_season$constants,
-                      modelInfo_season$data,
-                      modelInfo_season$inits)
+Rmodel <- nimbleModel(modelInfo_month$code,
+                      modelInfo_month$constants,
+                      modelInfo_month$data,
+                      modelInfo_month$inits)
 
 Cmodel <- compileNimble(Rmodel)
 
 spec <- configureMCMC(Rmodel)
 
 #### Best configuration of samplers for random effect occupancy model
-spec$removeSamplers('beta[1:7]')
+spec$removeSamplers('beta[1:9]')
 spec$addSampler('beta[1:3]', 'RW_block') # detection sub-model sampler
-spec$addSampler('beta[4:7]', 'RW_block') # occupancy sub-model sampler
+spec$addSampler('beta[4:9]', 'RW_block') # occupancy sub-model sampler
 spec$removeSamplers('sigma_alpha')
 spec$addSampler('sigma_alpha', 'RW_log_shift', list(shiftNodes='alpha')) # random effect sampler
 spec$getSamplers() # Check samplers
@@ -81,55 +82,12 @@ Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 niter <- 150000
 burnin <- 50000
 
-# Function for running MCMC multiple times
-mcmcClusterFunction <- function(x){
-  set.seed(x)
-  Cmcmc$run(niter)
-  samples <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
-  return(samples)
-}
-
 samplesList <- lapply(1:3, mcmcClusterFunction)
 
-# set.seed(1)
-# Cmcmc$run(niter)
-# samples1 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
-# 
-# set.seed(2)
-# Cmcmc$run(niter)
-# samples2 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
-# 
-# set.seed(3)
-# Cmcmc$run(niter)
-# samples3 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
-# 
-# samplesList <- list(samples1, samples2, samples3)
-# 
-# save(samples1, samples2, samples3, file = 'output/MCMC_season.RData')
-
-save(samplesList, file = 'output/MCMC_season_list.RData')
+save(samplesList, file = 'output/MCMC_month_list.RData')
 
 #### Loading saved MCMC run, sames as list, "samplesList"
 load(file = 'output/MCMC_season_list.RData')
-
-
-# ##############################################################################
-# #### Attempt at cluster
-# sfInit(parallel = TRUE, cpus = 2)
-# date()
-# 
-# sfLibrary(nimble)
-# sfExport("Cmcmc", "Rmodel", "niter", "burnin", "mcmcClusterFunction")
-# sfExport("spec")
-# sfExport("Cmodel")
-# sfExport("Rmcmc")
-# sfLapply(1:2, mcmcClusterFunction)
-# 
-# date()
-# sfStop() # Close the cluster
-# #################################################################################
-
-
 
 
 #######################################################################
@@ -159,38 +117,75 @@ names(results) <- c("mean", "cil", "ciu")
 results$params <- row.names(results)
 results[1:15,] # Coefficient results
 
+
+##############################################################################################################
+#### Plots
+
 #### Plotting P(occupancy) against covariates
 pocc <- results[grep("p_occ", results$params),]
-names(pocc) <- c("mean", "cil", "ciu")
 # Load detection data set
-detectData <- readRDS("../potato_psyllid_distribution_modeling/output/potato_psyllid_detection_dataset.rds")
+detectData <- readRDS("output/potato_psyllid_detection_dataset.rds")
 detectData$pocc <- pocc$mean
 
-plot(x = detectData$year, y = detectData$pocc)
-plot(x = detectData$list_length, y = detectData$pocc)
+# Year vs P(occupancy)
+tiff("results/figures/occupancy_year_vs_pocc.tif")
+  plot(x = detectData$year, y = detectData$pocc)
+  lines(smooth.spline(detectData$year, detectData$pocc, nknots = 4, tol = 1e-6), lwd = 2)
+dev.off()
+  
+# List length vs P(occupancy)
+tiff("results/figures/occupancy_list_length_vs_pocc.tif")
+  plot(x = detectData$list_length, y = detectData$pocc)
+  lines(smooth.spline(detectData$list_length, detectData$pocc, nknots = 4, tol = 1e-6), lwd = 2)
+dev.off()
 
-xyplot(pocc ~ year|factor(season), data = detectData)
+# List length vs month
+tiff("results/figures/occupancy_month_vs_pocc.tif")
+  plot(x = detectData$month, y = detectData$pocc)
+  lines(smooth.spline(detectData$month, detectData$pocc, nknots = 4, tol = 1e-6), lwd = 2)
+dev.off()
+
+
+# trivariate plots with month and year
+zz <- with(detectData, interp(x = year, y = month, z = pocc, duplicate = 'median'))
+pdf("results/figures/year-month-occupancy_contourplot_nimble_occupancy.pdf")
+  filled.contour(zz, col = topo.colors(32), xlab = "Year", ylab = "Month")
+dev.off()
 
 
 
+######################################################################################################
+#### Extra code
+
+# set.seed(1)
+# Cmcmc$run(niter)
+# samples1 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
+# 
+# set.seed(2)
+# Cmcmc$run(niter)
+# samples2 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
+# 
+# set.seed(3)
+# Cmcmc$run(niter)
+# samples3 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
+# 
+# samplesList <- list(samples1, samples2, samples3)
+# 
+# save(samples1, samples2, samples3, file = 'output/MCMC_season.RData')
 
 
-
-
-
-
-
-
-
-
-
-#### Wrap Up
-
-##I think this last version of the model (Part II) is our best yet.  The handling of the month variable truly needed to be changed.
-
-##Also, now we see significant effects from a number of the variables, with some nice temporal trends as you had hoped.
-
-##Let me know when you've had a chance to look over this.
-
-##Cheers!  - Daniel
-
+# ##############################################################################
+# #### Attempt at cluster
+# sfInit(parallel = TRUE, cpus = 2)
+# date()
+# 
+# sfLibrary(nimble)
+# sfExport("Cmcmc", "Rmodel", "niter", "burnin", "mcmcClusterFunction")
+# sfExport("spec")
+# sfExport("Cmodel")
+# sfExport("Rmcmc")
+# sfLapply(1:2, mcmcClusterFunction)
+# 
+# date()
+# sfStop() # Close the cluster
+# #################################################################################

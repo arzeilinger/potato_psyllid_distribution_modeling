@@ -29,7 +29,7 @@ ppcLists <- ppcData %>% make_lists(., min.list.length = 3)
 detectData <- detectDataFunc(ppcLists) 
 detectData <- dplyr::filter(detectData, !is.na(aet) & !is.na(cwd) & !is.na(tmn) & !is.na(tmx))
 detectData$lnlist_length <- log(detectData$list_length)
-detectData$season <- detectData$season %>% as.numeric()
+detectData$seasonNum <- detectData$season %>% as.numeric() # Factor levels: 1 = autumn, 2 = spring, 3 = summer, 4 = winter
 str(detectData)
 
 #### Exploring intercorrelations among climate variables
@@ -41,7 +41,7 @@ dev.off()
 
 
 # standardize numeric covariates, include as new variables in data frame
-covars <- c("year", "lnlist_length", "aet", "cwd", "tmn", "tmx")
+covars <- c("year", "month", "lnlist_length", "aet", "cwd", "tmn", "tmx")
 covars.i <- as.numeric(sapply(covars, function(x) which(names(detectData) == x), simplify = TRUE))
 for(i in covars.i){
   var.i <- names(detectData)[i]
@@ -51,15 +51,39 @@ for(i in covars.i){
 }
 
 # Additional covariates for quadratic effects and interactions
-#detectData$stdmonth2 <- detectData$stdmonth^2
+detectData$stdmonth2 <- detectData$stdmonth^2
 detectData$stdllyr <- detectData$stdlnlist_length*detectData$stdyear
-#detectData$stdyrseason <- detectData$stdyear*detectData$stdseason
-#detectData$stdyrmonth2 <- detectData$stdyear*detectData$stdmonth*detectData$stdmonth
 str(detectData)
 
 # Save detectData
 saveRDS(detectData, file = "output/potato_psyllid_detection_dataset.rds")
 write.csv(detectData, file = "output/potato_psyllid_detection_dataset.csv", row.names = FALSE)
+
+
+#### Make list of "flat" data vectors for NIMBLE model
+# make indices
+N <- nrow(detectData)
+siteID <- detectData$cellID %>% factor(., levels = unique(.)) %>% as.numeric()
+nsite <- detectData$cellID %>% unique() %>% length()
+
+nimbleData <- with(detectData, 
+                   list(N = N,
+                        nsite = nsite,
+                        aet = stdaet,
+                        tmn = stdtmn,
+                        tmx = stdtmx,
+                        year = stdyear,
+                        month = stdmonth,
+                        month2 = stdmonth2,
+                        season = seasonNum,
+                        list_length = stdlnlist_length,
+                        year_list_length = stdllyr,
+                        y = detection,
+                        siteID = siteID))
+saveRDS(nimbleData, file = "output/data_nimble_zib.rds")
+saveRDS(nimbleData, file = "../zib_glmm/data/data_nimble_zib.rds")
+
+
 
 #### Make JAGS data set, with lists as rows (i) and sites as columns (j)
 detectionMatrix <- makeEcoDataMatrix("detection")
@@ -79,27 +103,6 @@ jagsGLMMdata <- list(detectionMatrix = detectionMatrix,
                      nsite = ncol(detectionMatrix))
 saveRDS(jagsGLMMdata, file = "output/Data_JAGS_GLMM.rds")
 
-
-#### Make list of "flat" data vectors for NIMBLE model
-# make indices
-N <- nrow(detectData)
-siteID <- detectData$cellID %>% factor(., levels = unique(.)) %>% as.numeric()
-nsite <- detectData$cellID %>% unique() %>% length()
-
-nimbleData <- with(detectData, 
-                   list(N = N,
-                        nsite = nsite,
-                        aet = stdaet,
-                        tmn = stdtmn,
-                        tmx = stdtmx,
-                        year = stdyear,
-                        season = season,
-                        list_length = stdlnlist_length,
-                        year_list_length = stdllyr,
-                        y = detection,
-                        siteID = siteID))
-saveRDS(nimbleData, file = "output/data_nimble_zib.rds")
-saveRDS(nimbleData, file = "../zib_glmm/data/data_nimble_zib.rds")
 
 ############################################################################################
 #### Figures for lists
