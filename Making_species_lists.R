@@ -25,6 +25,11 @@ Ref_raster <- aggregate(Ref_raster, ncells)
 # Need to redefine extent of BCM raster in terms of lat and long 
 dem <- raster("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Climate data/ca_270m_t6.asc")
 extent(Ref_raster) <- extent(dem)
+# Save and plot reference raster 
+saveRDS(Ref_raster, file = "output/reference_raster.rds")
+tiff("output/reference_raster.tif")
+  plot(Ref_raster)
+dev.off()
 
 #### Load data
 # Species records
