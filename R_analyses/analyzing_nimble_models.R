@@ -1,10 +1,9 @@
 ##################################################################
 #### Analyzing NIMBLE models
 
-my.packages <- c("coda", "lattice", "akima", "raster", "nimble", "tidyr", "dplyr")
+my.packages <- c("coda", "lattice", "akima", "raster",
+                 "tidyr", "dplyr", "maps", "rasterVis")
 lapply(my.packages, require, character.only = TRUE)
-
-source("R_functions/nimble_definitions.R")
 
 #### FOR OCCUPANCY MODEL
 #### Loading saved MCMC run, sames as list, "samplesList"
@@ -12,7 +11,7 @@ load(file = 'output/MCMC_month_list.RData')
 
 #### FOR GLMM MODEL
 #### Loading saved MCMC run, sames as list, "samplesList"
-load(file = 'output/MCMC_glmm_list.RData')
+# load(file = 'output/MCMC_glmm_list.RData')
 
 
 #######################################################################
@@ -110,21 +109,32 @@ dev.off()
 # Read in reference raster
 Ref_raster <- readRDS("output/reference_raster.rds")
 rasterCells <- data.frame(cellID = 1:ncell(Ref_raster))
+extent(Ref_raster) <- spTransform(Ref_raster,CRS('+proj=aea +datum=NAD83 +lat_1=34 +lat_2=40.5 +lat_0=0 +lon_0=-120 +x_0=0 +y_0=-4000000'))
+
+
+# Download States boundaries (might take time)
+out <- getData('GADM', country='United States', level=1)
+# Extract California state
+California <- out[out$NAME_1 %in% 'California',]
+
 #### Replace cell values
 #### 1930 - 1940 map
-yearsForMaps <- c(1930, 1960, 1990)
-for(i in length(1:yearsForMaps)){
+yearsForMaps <- c(1920, 1950, 1990)
+for(i in 1:length(yearsForMaps)){
   year.i <- yearsForMaps[i]
-  rasterData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+10), c("year", "cellID", "pocc")]
-  print(table(rasterData$year, rasterData$cellID))
+  rasterData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+21), c("year", "cellID", "pocc")]
+  print(year.i)
+  print(table(rasterData$cellID, rasterData$year))
   rasterSummary <- rasterData %>% group_by(cellID) %>% summarise(meanOcc = mean(pocc))
   rasterValues <- left_join(rasterCells, rasterSummary, by = "cellID")
-  rasterValues[is.na(rasterValues$meanOcc), "meanOcc"] <- 0
+  rasterValues[is.na(rasterValues$meanOcc), "meanOcc"] <- 1
   poccMap <- Ref_raster
   poccMap[] <- rasterValues$meanOcc
+  extent(poccMap) <- extent(California)
   fileName <- paste("results/figures/occupancy_raster_map_", year.i, ".tif", sep="")
   tiff(fileName)
-    plot(poccMap)
+    levelplot(poccMap, margin = FALSE, par.settings = GrTheme()) +
+      layer(sp.polygons(California))
   dev.off()
 }
 
