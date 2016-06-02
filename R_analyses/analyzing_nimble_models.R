@@ -8,10 +8,14 @@ lapply(my.packages, require, character.only = TRUE)
 #### FOR OCCUPANCY MODEL
 #### Loading saved MCMC run, sames as list, "samplesList"
 load(file = 'output/MCMC_month_list.RData')
+# Directory for figures from occupancy model
+outdir <- "results/figures/occupancy_figures/"
 
 #### FOR GLMM MODEL
 #### Loading saved MCMC run, sames as list, "samplesList"
 # load(file = 'output/MCMC_glmm_list.RData')
+# # Directory for figures from glmm model
+# outdir <- "results/figures/glmm_figures"
 
 
 #######################################################################
@@ -27,7 +31,7 @@ coda::gelman.diag(mcmcs, autoburnin = FALSE)
 effectiveSize(mcmcs)
 
 ## Posterior Density Plots
-pdf("results/figures/trace_and_posterior_density_plots_occupancy.pdf")
+pdf(paste(outdir, "trace_and_posterior_density_plots_occupancy.pdf", sep=""))
   plot(mcmcs[[2]], ask = FALSE)
 dev.off()
 
@@ -61,7 +65,7 @@ detectData$pocc <- pocc$mean
 # betaYear <- results[results$params == "beta[7]", "mean"]
 # yearv$predOcc <- plogis(mu_alpha + betaYear*yearv$stdyear)
 
-tiff("results/figures/occupancy_year_vs_pocc.tif")
+tiff(paste(outdir,"occupancy_year_vs_pocc.tif",sep=""))
   plot(x = detectData$year, y = detectData$pocc,
        xlab = list("Year Collected", cex = 1.4), 
        ylab = list("Probability of occupancy", cex = 1.4),
@@ -70,7 +74,7 @@ tiff("results/figures/occupancy_year_vs_pocc.tif")
 dev.off()
   
 # List length vs P(occupancy)
-tiff("results/figures/occupancy_list_length_vs_pocc.tif")
+tiff(paste(outdir,"occupancy_list_length_vs_pocc.tif",sep=""))
   plot(x = detectData$list_length, y = detectData$pocc,
        xlab = list("Length of species lists", cex = 1.4), 
        ylab = list("Probability of occupancy", cex = 1.4),
@@ -79,7 +83,7 @@ tiff("results/figures/occupancy_list_length_vs_pocc.tif")
 dev.off()
 
 # Month vs. P(occupancy)
-tiff("results/figures/occupancy_month_vs_pocc.tif")
+tiff(paste(outdir,"occupancy_month_vs_pocc.tif",sep=""))
   plot(x = detectData$month, y = detectData$pocc,
        xlab = list("Month collected", cex = 1.4), 
        ylab = list("Probability of occupancy", cex = 1.4),
@@ -90,14 +94,14 @@ dev.off()
 
 #### trivariate plots with month and year
 zz <- with(detectData, interp(x = year, y = month, z = pocc, duplicate = 'mean'))
-tiff("results/figures/year-month-occupancy_contourplot_nimble_occupancy.tif")
+tiff(paste(outdir,"year-month-occupancy_contourplot_nimble_occupancy_greyscale.tif",sep=""))
   filled.contour(zz, col = gray(seq(0,1,by=0.05)), 
                  xlab = list("Year collected", cex = 1.4), 
                  ylab = list("Month collected", cex = 1.4),
                  cex.axis = 1.3)
 dev.off()
 
-tiff("results/figures/year-month-occupancy_contourplot_nimble_occupancy_colormap.tif")
+tiff(paste(outdir,"year-month-occupancy_contourplot_nimble_occupancy_colormap.tif",sep=""))
   filled.contour(zz, col = topo.colors(32), 
                  xlab = list("Year collected", cex = 1.4), 
                  ylab = list("Month collected", cex = 1.4),
@@ -107,34 +111,45 @@ dev.off()
 
 #### Making raster maps of P(occupancy)
 # Read in reference raster
+# This reference raster was used to generate the cellIDs, in "Making_species_list.R" script
+# Each cell is 15km x 15km
 Ref_raster <- readRDS("output/reference_raster.rds")
 rasterCells <- data.frame(cellID = 1:ncell(Ref_raster))
-extent(Ref_raster) <- spTransform(Ref_raster,CRS('+proj=aea +datum=NAD83 +lat_1=34 +lat_2=40.5 +lat_0=0 +lon_0=-120 +x_0=0 +y_0=-4000000'))
 
-
+#### For California state boundary polygon
 # Download States boundaries (might take time)
 out <- getData('GADM', country='United States', level=1)
 # Extract California state
 California <- out[out$NAME_1 %in% 'California',]
 
-#### Replace cell values
-#### 1930 - 1940 map
-yearsForMaps <- c(1920, 1950, 1990)
+#### Replace cell values with P(occupancy) for cells with data
+#### P(occupancy) values are averaged over 20 years for each cell
+yearsForMaps <- c(1920, 1950, 1990) # The years for which each raster map will begin
+nyears <- 20 # Number of years combined in each raster map
+i <- 2
 for(i in 1:length(yearsForMaps)){
   year.i <- yearsForMaps[i]
-  rasterData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+21), c("year", "cellID", "pocc")]
+  # Select only years of interest
+  rasterData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+nyears), c("year", "cellID", "pocc")]
   print(year.i)
-  print(table(rasterData$cellID, rasterData$year))
+  print(dim(table(rasterData$cellID, rasterData$year)))
+  # Average P(occupancy) over years for each cell
   rasterSummary <- rasterData %>% group_by(cellID) %>% summarise(meanOcc = mean(pocc))
+  # Make a data.frame with a meanOcc value for each cell and set NAs to 0
   rasterValues <- left_join(rasterCells, rasterSummary, by = "cellID")
-  rasterValues[is.na(rasterValues$meanOcc), "meanOcc"] <- 1
+  rasterValues[is.na(rasterValues$meanOcc), "meanOcc"] <- 0
   poccMap <- Ref_raster
+  # Replace raster values with P(occupancy)
   poccMap[] <- rasterValues$meanOcc
+  # Set extent as lat/long coordinates and plot
   extent(poccMap) <- extent(California)
-  fileName <- paste("results/figures/occupancy_raster_map_", year.i, ".tif", sep="")
+  fileName <- paste(outdir,"occupancy_raster_map_", year.i, ".tif", sep="")
   tiff(fileName)
-    levelplot(poccMap, margin = FALSE, par.settings = GrTheme()) +
-      layer(sp.polygons(California))
+    print(rasterVis::levelplot(poccMap, margin = FALSE, par.settings = GrTheme(region = brewer.pal(9, 'Greys'))) +
+      layer(sp.polygons(California)))
   dev.off()
+  # tiff(fileName)
+  #   plot(poccMap)
+  # dev.off()
 }
 
