@@ -16,7 +16,15 @@ source("R_functions/museum_specimen_analysis_functions.R")
 #### Using BCM 2014 raster for Minimum temperature for 11/2000
 #### Resolution of BCM 2014 data = 270 m x 270 m
 #### Rdata file loaded is a list with raster as 1st item, metadata as 2nd item
-Ref_raster_data <- readRDS("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Climate data/BCM2014/Rasters/tmn/CA_BCM_HST_Monthly_tmn_2000_11.Rdata")
+Ref_raster_data <- readRDS("data/CA_BCM_HST_Monthly_tmn_2000_11.Rdata")
+Ref_raster <- Ref_raster_data[[1]]
+nkm <- 15 # Cell dimension, as number of km on a side
+# To get cells 10 km x 10 km, aggregate by 37
+ncells <- round(3.703704*nkm, digits = 0) # Number of cells to aggregate into 1 new cell to get desired cell size
+Ref_raster <- aggregate(Ref_raster, ncells) 
+# Need to redefine extent of BCM raster in terms of lat and long 
+dem <- raster("data/ca_270m_t6.asc")
+extent(Ref_raster) <- extent(dem)
 # Save and plot reference raster 
 saveRDS(Ref_raster, file = "output/reference_raster.rds")
 tiff("output/reference_raster.tif")
