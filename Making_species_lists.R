@@ -5,7 +5,7 @@ rm(list = ls())
 #setwd("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project")
 
 ## Load libraries
-my_packages<-c('rgdal', 'sp', 'maptools', 'rgeos',
+my_packages<-c('rgdal', 'sp', 'maptools', 'rgeos', 'ggplot2',
                'data.table', 'maps', 'tidyr', 'dplyr', 'raster')
 lapply(my_packages, require, character.only=T)
 
@@ -179,6 +179,7 @@ ppRecords <- duplRecords[duplRecords$Species == "Bactericera.cockerelli",]
 
 tiff("results/figures/all_hemip_records_CAmap.tif")
   map("state", regions = c("california"))
+  map.axes(cex.axis = 1.4)
   points(duplRecords$DecimalLongitude,
          duplRecords$DecimalLatitude,
          pch = 1, col = "grey", cex = 1.8)
@@ -186,6 +187,24 @@ tiff("results/figures/all_hemip_records_CAmap.tif")
          ppRecords$DecimalLatitude,
          pch = 16, col = "black", cex = 1.8)
 dev.off()
+
+
+#### Histogram of year collected for all specimens
+all_hemip_histogram <- ggplot(duplRecords,aes(x=YearCollected)) + 
+  geom_histogram(fill = "darkgrey", alpha = 1, binwidth = 1) +
+  geom_histogram(data=subset(duplRecords,Species == "Bactericera.cockerelli"),fill = "black", alpha = 1, binwidth = 1) +
+  xlab("Year collected") + ylab("Frequency") + 
+  theme_bw() + 
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        #panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+ggsave(filename = "results/figures/all_hemip_records_year_histogram.tiff", 
+       plot = all_hemip_histogram)
+
+
 
 
 ## Map of CA raster cells as polygons

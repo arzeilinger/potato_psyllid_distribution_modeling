@@ -188,6 +188,8 @@ nrow(hemipRecords[hemipRecords$ScientificName == "Bactericera cockerelli",])
 
 ############################################################################################
 #### Exploring records and making maps
+############################################################################################
+
 hemipRecords <- readRDS("output/Compiled_Hemiptera_records_2016-01-19.rds")
 # Need to fix dates occurring after 2015 (!), for now just remove them
 hemipRecords <- hemipRecords[hemipRecords$YearCollected >= 1900,]
