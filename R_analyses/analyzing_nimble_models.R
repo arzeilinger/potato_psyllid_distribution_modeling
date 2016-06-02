@@ -36,6 +36,7 @@ pdf(paste(outdir, "trace_and_posterior_density_plots_occupancy.pdf", sep=""))
 dev.off()
 
 
+###############################################################################################
 #### Posterior Inferences
 #### Mean and 95% Credible intervals
 results <- as.data.frame(cbind(apply(samplesList[[2]], 2, mean),
@@ -44,10 +45,15 @@ results <- as.data.frame(cbind(apply(samplesList[[2]], 2, mean),
 names(results) <- c("mean", "cil", "ciu")
 results$params <- row.names(results)
 results[1:15,] # Coefficient results
+# Save results
+saveRDS(results, "results/occupancy_model_results.rds")
 
 
 ##############################################################################################################
 #### Plots
+
+# Load MCMC results
+results <- readRDS("results/occupancy_model_results.rds")
 
 #### Plotting P(occupancy) against covariates
 pocc <- results[grep("p_occ", results$params),]
