@@ -6,16 +6,16 @@ my.packages <- c("coda", "lattice", "akima", "raster",
 lapply(my.packages, require, character.only = TRUE)
 
 #### FOR OCCUPANCY MODEL
-#### Loading saved MCMC run, sames as list, "samplesList"
+#### Loading saved MCMC run, saved as list, "samplesList"
 load(file = 'output/MCMC_month_list.RData')
 # Directory for figures from occupancy model
 outdir <- "results/figures/occupancy_figures/"
 
 #### FOR GLMM MODEL
-#### Loading saved MCMC run, sames as list, "samplesList"
-# load(file = 'output/MCMC_glmm_list.RData')
-# # Directory for figures from glmm model
-# outdir <- "results/figures/glmm_figures"
+#### Loading saved MCMC run, saved as list, "samplesList"
+load(file = 'output/MCMC_glmm_list.RData')
+# Directory for figures from glmm model
+outdir <- "results/figures/glmm_figures/"
 
 
 #######################################################################
@@ -31,7 +31,7 @@ coda::gelman.diag(mcmcs, autoburnin = FALSE)
 effectiveSize(mcmcs)
 
 ## Posterior Density Plots
-pdf(paste(outdir, "trace_and_posterior_density_plots_occupancy.pdf", sep=""))
+pdf(paste(outdir, "trace_and_posterior_density_plots.pdf", sep=""))
   plot(mcmcs[[2]], ask = FALSE)
 dev.off()
 
@@ -45,9 +45,12 @@ results <- as.data.frame(cbind(apply(samplesList[[2]], 2, mean),
 names(results) <- c("mean", "cil", "ciu")
 results$params <- row.names(results)
 results[1:15,] # Coefficient results
-# Save results
-saveRDS(results, "results/occupancy_model_results.rds")
 
+# # Save results for occupancy model
+# saveRDS(results, "results/occupancy_model_results.rds")
+
+# Save results for glmm model
+saveRDS(results, "results/glmm_model_results.rds")
 
 ##############################################################################################################
 #### Plots
@@ -71,7 +74,7 @@ detectData$pocc <- pocc$mean
 # betaYear <- results[results$params == "beta[7]", "mean"]
 # yearv$predOcc <- plogis(mu_alpha + betaYear*yearv$stdyear)
 
-tiff(paste(outdir,"occupancy_year_vs_pocc.tif",sep=""))
+tiff(paste(outdir,"year_vs_pocc.tif",sep=""))
   plot(x = detectData$year, y = detectData$pocc,
        xlab = list("Year Collected", cex = 1.4), 
        ylab = list("Probability of occupancy", cex = 1.4),
@@ -80,7 +83,7 @@ tiff(paste(outdir,"occupancy_year_vs_pocc.tif",sep=""))
 dev.off()
   
 # List length vs P(occupancy)
-tiff(paste(outdir,"occupancy_list_length_vs_pocc.tif",sep=""))
+tiff(paste(outdir,"list_length_vs_pocc.tif",sep=""))
   plot(x = detectData$list_length, y = detectData$pocc,
        xlab = list("Length of species lists", cex = 1.4), 
        ylab = list("Probability of occupancy", cex = 1.4),
@@ -89,7 +92,7 @@ tiff(paste(outdir,"occupancy_list_length_vs_pocc.tif",sep=""))
 dev.off()
 
 # Month vs. P(occupancy)
-tiff(paste(outdir,"occupancy_month_vs_pocc.tif",sep=""))
+tiff(paste(outdir,"month_vs_pocc.tif",sep=""))
   plot(x = detectData$month, y = detectData$pocc,
        xlab = list("Month collected", cex = 1.4), 
        ylab = list("Probability of occupancy", cex = 1.4),
@@ -154,8 +157,10 @@ for(i in 1:length(yearsForMaps)){
     print(rasterVis::levelplot(poccMap, margin = FALSE, par.settings = GrTheme(region = brewer.pal(9, 'Greys'))) +
       layer(sp.polygons(California)))
   dev.off()
+  # # Alternative method of plotting both raster and California state border
   # tiff(fileName)
   #   plot(poccMap)
+  #   map("state", regions = c("california"), add = TRUE)
   # dev.off()
 }
 
