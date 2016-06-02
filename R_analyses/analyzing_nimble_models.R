@@ -23,12 +23,17 @@ outdir <- "results/figures/glmm_figures/"
 #### Assessing convergence of only covariates and mu.alpha. Memory requirements too great to assess for all p_occ[i]
 
 # Make mcmc.list with only covariates and mu.alpha
-mcmcs <- mcmc.list(lapply(1:length(samplesList), function(x) as.mcmc(samplesList[[x]][,1:15])))
+mcmcs <- mcmc.list(lapply(1:length(samplesList), function(x) as.mcmc(samplesList[[x]][,c(1:15,ncol(samplesList[[x]]))])))
 
+## Convergence diagnostics
 ## Rhat
-coda::gelman.diag(mcmcs, autoburnin = FALSE)
+rhat <- coda::gelman.diag(mcmcs, autoburnin = FALSE)
 ## Effective sample size
-effectiveSize(mcmcs)
+pd <- effectiveSize(mcmcs)
+# Combine into one table
+rhatSummary <- rhat[[1]] %>% round(., digits = 2) 
+rhatSummary <- paste(rhatSummary[,1], " (", rhatSummary[,2], ")", sep="")
+cbind(rhatSummary, round(pd, digits = 2))
 
 ## Posterior Density Plots
 pdf(paste(outdir, "trace_and_posterior_density_plots.pdf", sep=""))
@@ -46,6 +51,10 @@ names(results) <- c("mean", "cil", "ciu")
 results$params <- row.names(results)
 results[1:15,] # Coefficient results
 
+
+# Make results table for ms
+resultsTable <- rbind(results[-grep("p_occ", results$params), c("mean", "cil", "ciu")]) %>% round(., digits = 2)
+resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
 # # Save results for occupancy model
 # saveRDS(results, "results/occupancy_model_results.rds")
 
@@ -55,8 +64,11 @@ saveRDS(results, "results/glmm_model_results.rds")
 ##############################################################################################################
 #### Plots
 
-# Load MCMC results
+# Load occupancy MCMC results
 results <- readRDS("results/occupancy_model_results.rds")
+
+# Load GLMM MCMC results
+results <- readRDS("results/glmm_model_results.rds")
 
 #### Plotting P(occupancy) against covariates
 pocc <- results[grep("p_occ", results$params),]
@@ -99,6 +111,25 @@ tiff(paste(outdir,"month_vs_pocc.tif",sep=""))
        cex.axis = 1.3)
   lines(smooth.spline(detectData$month, detectData$pocc, nknots = 8, tol = 1e-6), lwd = 2)
 dev.off()
+
+# AET vs. P(occupancy)
+tiff(paste(outdir,"aet_vs_pocc.tif",sep=""))
+  plot(x = detectData$aet, y = detectData$pocc,
+       xlab = list("Actual evapotranspiration", cex = 1.4), 
+       ylab = list("Probability of occupancy", cex = 1.4),
+       cex.axis = 1.3)
+  lines(smooth.spline(detectData$aet, detectData$pocc, nknots = 8, tol = 1e-6), lwd = 2)
+dev.off()
+
+# tmn vs. P(occupancy)
+tiff(paste(outdir,"tmn_vs_pocc.tif",sep=""))
+  plot(x = detectData$tmn, y = detectData$pocc,
+       xlab = list("Annual minimum temperature (deg C)", cex = 1.4), 
+       ylab = list("Probability of occupancy", cex = 1.4),
+       cex.axis = 1.3)
+  lines(smooth.spline(detectData$tmn, detectData$pocc, nknots = 8, tol = 1e-6), lwd = 2)
+dev.off()
+
 
 
 #### trivariate plots with month and year
