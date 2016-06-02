@@ -87,7 +87,7 @@ samplesList <- lapply(1:3, mcmcClusterFunction)
 save(samplesList, file = 'output/MCMC_month_list.RData')
 
 #### Loading saved MCMC run, sames as list, "samplesList"
-load(file = 'output/MCMC_season_list.RData')
+load(file = 'output/MCMC_month_list.RData')
 
 
 #######################################################################
