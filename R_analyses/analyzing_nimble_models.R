@@ -13,9 +13,9 @@ outdir <- "results/figures/occupancy_figures/"
 
 #### FOR GLMM MODEL
 #### Loading saved MCMC run, saved as list, "samplesList"
-load(file = 'output/MCMC_glmm_list.RData')
-# Directory for figures from glmm model
-outdir <- "results/figures/glmm_figures/"
+# load(file = 'output/MCMC_glmm_list.RData')
+# # Directory for figures from glmm model
+# outdir <- "results/figures/glmm_figures/"
 
 
 #######################################################################
@@ -51,15 +51,14 @@ names(results) <- c("mean", "cil", "ciu")
 results$params <- row.names(results)
 results[1:15,] # Coefficient results
 
-
 # Make results table for ms
 resultsTable <- rbind(results[-grep("p_occ", results$params), c("mean", "cil", "ciu")]) %>% round(., digits = 2)
 resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
-# # Save results for occupancy model
-# saveRDS(results, "results/occupancy_model_results.rds")
+# Save results for occupancy model
+saveRDS(results, "results/occupancy_model_results.rds")
 
-# Save results for glmm model
-saveRDS(results, "results/glmm_model_results.rds")
+# # Save results for glmm model
+# saveRDS(results, "results/glmm_model_results.rds")
 
 ##############################################################################################################
 #### Plots
@@ -67,8 +66,8 @@ saveRDS(results, "results/glmm_model_results.rds")
 # Load occupancy MCMC results
 results <- readRDS("results/occupancy_model_results.rds")
 
-# Load GLMM MCMC results
-results <- readRDS("results/glmm_model_results.rds")
+# # Load GLMM MCMC results
+# results <- readRDS("results/glmm_model_results.rds")
 
 #### Plotting P(occupancy) against covariates
 pocc <- results[grep("p_occ", results$params),]
