@@ -65,6 +65,7 @@ saveRDS(results, "results/occupancy_model_results.rds")
 
 # Load occupancy MCMC results
 results <- readRDS("results/occupancy_model_results.rds")
+results[1:15,] # Coefficient results
 
 # # Load GLMM MCMC results
 # results <- readRDS("results/glmm_model_results.rds")
@@ -78,12 +79,12 @@ detectData$pocc <- pocc$mean
 #### Year vs P(occupancy)
 # Making a line based on coefficient estimates
 # Is not very insightful
-# yearv <- as.data.frame(cbind(unique(detectData$year), unique(detectData$stdyear)))
-# names(yearv) <- c("year", "stdyear")
-# yearv <- yearv[order(yearv$stdyear),]
-# mu_alpha <- results[results$params == "mu_alpha", "mean"]
-# betaYear <- results[results$params == "beta[7]", "mean"]
-# yearv$predOcc <- plogis(mu_alpha + betaYear*yearv$stdyear)
+yearv <- as.data.frame(cbind(unique(detectData$year), unique(detectData$stdyear)))
+names(yearv) <- c("year", "stdyear")
+yearv <- yearv[order(yearv$stdyear),]
+mu_alpha <- results[results$params == "mu_alpha", "mean"]
+betaYear <- results[results$params == "beta[7]", "mean"]
+yearv$predOcc <- plogis(mu_alpha + betaYear*yearv$stdyear)
 
 tiff(paste(outdir,"year_vs_pocc.tif",sep=""))
   plot(x = detectData$year, y = detectData$pocc,
@@ -91,6 +92,8 @@ tiff(paste(outdir,"year_vs_pocc.tif",sep=""))
        ylab = list("Probability of occupancy", cex = 1.4),
        cex.axis = 1.3)
   lines(smooth.spline(detectData$year, detectData$pocc, nknots = 4, tol = 1e-6, df = 4), lwd = 2)
+  lines(yearv$year, yearv$predOcc, lwd = 2, lty = 1)
+  abline(lm(detectData$pocc ~ detectData$year), lty = 1, lwd = 2)
 dev.off()
   
 # List length vs P(occupancy)
@@ -152,6 +155,57 @@ dev.off()
 # Read in reference raster
 # This reference raster was used to generate the cellIDs, in "Making_species_list.R" script
 # Each cell is 15km x 15km
+#### Load reference raster
+Ref_raster <- readRDS("output/reference_raster.rds")
+### Create empty output raster
+empty_raster_df <- as.data.frame(Ref_raster, xy = TRUE)
+empty_raster_df$layer <- NA
+#### For California state boundary polygon
+## Download States boundaries (might take time)
+out <- getData('GADM', country='United States', level=1)
+## Extract California state
+California <- out[out$NAME_1 %in% 'California',]
+## Reproject California boundary
+library(sp)
+California <- spTransform(California, projection(Ref_raster))
+#### Replace cell values with P(occupancy) for cells with data
+#### P(occupancy) values are averaged over 20 years for each cell
+yearsForMaps <- c(1920, 1950, 1990) # The years for which each raster map will begin
+nyears <- 20 # Number of years combined in each raster map
+i <- 2
+for(i in 1:length(yearsForMaps)){
+        year.i <- yearsForMaps[i]
+        # Select only years of interest
+        rasterData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+nyears), c("year", "cellID", "pocc")]
+        print(year.i)
+        print(dim(table(rasterData$cellID, rasterData$year)))
+        # Average P(occupancy) over years for each cell
+        rasterSummary <- rasterData %>% group_by(cellID) %>% summarise(meanOcc = mean(pocc)) %>% as.data.frame()
+        # Use the empty raster to create an output raster
+        poccMap <- empty_raster_df
+        poccMap$layer[rasterSummary$cellID] <- rasterSummary$meanOcc
+        # Create raster from poccMap data.frame 
+        poccMap <- rasterFromXYZ(poccMap)
+        # Set extent as lat/long coordinates and plot
+        extent(poccMap) <- extent(California)
+        fileName <- paste(outdir,"occupancy_raster_map_", year.i, ".tif", sep="")
+        tiff(fileName)
+        print(rasterVis::levelplot(poccMap, margin = FALSE, par.settings = GrTheme(region = brewer.pal(9, 'Greys'))) +
+                      layer(California))
+        dev.off()
+        # # Alternative method of plotting both raster and California state border
+        # tiff(fileName)
+        #   plot(poccMap)
+        #   map("state", regions = c("california"), add = TRUE)
+        # dev.off()
+}
+
+
+
+
+
+
+
 Ref_raster <- readRDS("output/reference_raster.rds")
 rasterCells <- data.frame(cellID = 1:ncell(Ref_raster))
 
