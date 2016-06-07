@@ -68,6 +68,22 @@ predFunc <- function(betas = betas, covars = covars, data = detectData){
 }
 
 
+
+## Function to make a line for scatterplots based on model coefficient estimates
+coefline <- function(covar, stdcovar){
+  # Function to generate predicted P(occupancy) estimates from fitted coefficient for a givent covariate
+  # "covar" must be in quotes
+  # stdcovar <- paste("std", covar, sep = "")
+  xv <- as.data.frame(cbind(unique(detectData[,covar]), unique(detectData[,stdcovar])))
+  names(xv) <- c("covar", "stdcovar")
+  xv <- xv[order(xv$stdcovar),]
+  mu_alpha <- resultsPars[resultsPars$params == "mu_alpha", "mean"]
+  beta <- resultsPars[resultsPars$covar == covar, "mean"][1]
+  xv$predOcc <- plogis(mu_alpha + beta*xv$stdcovar)
+  return(xv)
+}
+
+
 ################################################################################################################
 #### Functions for analysis of count data with N-mixture model or Poisson GLM
 

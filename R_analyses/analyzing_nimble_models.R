@@ -6,6 +6,8 @@ my.packages <- c("coda", "lattice", "akima", "raster",
                  "sp", "fields")
 lapply(my.packages, require, character.only = TRUE)
 
+source("R_functions/museum_specimen_analysis_functions.R")
+
 #### FOR OCCUPANCY MODEL
 #### Loading saved MCMC run, saved as list, "samplesList"
 load(file = 'output/MCMC_month_list.RData')
@@ -66,7 +68,9 @@ saveRDS(results, "results/occupancy_model_results.rds")
 
 # Load occupancy MCMC results
 results <- readRDS("results/occupancy_model_results.rds")
-results[1:15,] # Coefficient results
+resultsPars <- results[-grep("p_occ", results$params), c("mean", "cil", "ciu", "params")]
+resultsPars$covar <- c("det_intercept", "list_length", "year_list_length", "aet", "tmn", "tmx", "year", "month", "month2", NA, NA)
+resultsPars
 
 # # Load GLMM MCMC results
 # results <- readRDS("results/glmm_model_results.rds")
@@ -78,35 +82,32 @@ detectData <- readRDS("output/potato_psyllid_detection_dataset.rds")
 detectData$pocc <- pocc$mean
 
 #### Year vs P(occupancy)
-# Making a line based on coefficient estimates
-# Is not very insightful
-yearv <- as.data.frame(cbind(unique(detectData$year), unique(detectData$stdyear)))
-names(yearv) <- c("year", "stdyear")
-yearv <- yearv[order(yearv$stdyear),]
-mu_alpha <- results[results$params == "mu_alpha", "mean"]
-betaYear <- results[results$params == "beta[7]", "mean"]
-yearv$predOcc <- plogis(mu_alpha + betaYear*yearv$stdyear)
-
+yearline <- coefline("year", "stdyear")
 tiff(paste(outdir,"year_vs_pocc.tif",sep=""))
   plot(x = detectData$year, y = detectData$pocc,
        xlab = list("Year Collected", cex = 1.4), 
        ylab = list("Probability of occupancy", cex = 1.4),
        cex.axis = 1.3)
-  lines(smooth.spline(detectData$year, detectData$pocc, nknots = 4, tol = 1e-6, df = 4), lwd = 2)
-  lines(yearv$year, yearv$predOcc, lwd = 2, lty = 1)
+  lines(smooth.spline(detectData$year, detectData$pocc, nknots = 4, tol = 1e-6, df = 3), lwd = 2)
+  lines(yearline$covar, yearline$predOcc, lwd = 2, lty = 1)
   #abline(lm(detectData$pocc ~ detectData$year), lty = 1, lwd = 2)
 dev.off()
   
-# List length vs P(occupancy)
+
+#### List length vs P(occupancy)
+llline <- coefline("list_length", "stdlnlist_length")
 tiff(paste(outdir,"list_length_vs_pocc.tif",sep=""))
   plot(x = detectData$list_length, y = detectData$pocc,
        xlab = list("Length of species lists", cex = 1.4), 
        ylab = list("Probability of occupancy", cex = 1.4),
        cex.axis = 1.3)
   lines(smooth.spline(detectData$list_length, detectData$pocc, nknots = 4, tol = 1e-20), lwd = 2)
+  lines(llline$covar, llline$predOcc, lwd = 2, lty = 1)
 dev.off()
 
-# Month vs. P(occupancy)
+
+#### Month vs. P(occupancy)
+# Doesn't inlcude coefficient line
 tiff(paste(outdir,"month_vs_pocc.tif",sep=""))
   plot(x = detectData$month, y = detectData$pocc,
        xlab = list("Month collected", cex = 1.4), 
