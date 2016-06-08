@@ -89,7 +89,7 @@ tiff(paste(outdir,"year_vs_pocc.tif",sep=""))
        ylab = list("Probability of occupancy", cex = 1.4),
        cex.axis = 1.3)
   lines(smooth.spline(detectData$year, detectData$pocc, nknots = 4, tol = 1e-6, df = 3), lwd = 2)
-  lines(yearline$covar, yearline$predOcc, lwd = 2, lty = 1)
+  #lines(yearline$covar, yearline$predOcc, lwd = 2, lty = 1)
   #abline(lm(detectData$pocc ~ detectData$year), lty = 1, lwd = 2)
 dev.off()
   
@@ -199,4 +199,26 @@ for(i in 1:length(yearsForMaps)){
         #   plot(poccMap)
         #   map("state", regions = c("california"), add = TRUE)
         # dev.off()
+}
+
+
+# Make maps with different-sized points instead of raster cells
+# The size of symbols are relative to the P(occupancy) value
+for(i in 1:length(yearsForMaps)){
+        year.i <- yearsForMaps[i]
+        # Select only years of interest
+        rasterData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+nyears), c("year", "cellID", "pocc")]
+        print(year.i)
+        print(dim(table(rasterData$cellID, rasterData$year)))
+        # Average P(occupancy) over years for each cell
+        rasterSummary <- rasterData %>% group_by(cellID) %>% summarise(meanOcc = mean(pocc)) %>% as.data.frame()
+        # Use the empty raster to create an output raster
+        poccMap <- empty_raster_df
+        poccMap$layer[rasterSummary$cellID] <- rasterSummary$meanOcc
+        poccMap_points <- poccMap %>% dplyr::filter(complete.cases(.))
+        fileName <- paste(outdir,"occupancy_raster_map_", year.i, "_points.tif", sep="")
+        tiff(fileName)
+        plot(California)
+        points(poccMap_points[, 1:2], pch = 16, cex = poccMap_points$layer * 2.5)
+        dev.off()
 }
