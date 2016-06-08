@@ -195,11 +195,12 @@ for(i in 1:length(yearsForMaps)){
         ppMap <- empty_raster_df
         ppMap$layer[ppData] <- 1
         ppMap <- ppMap %>% dplyr::filter(complete.cases(.))
-        fileName <- paste(outdir,"occupancy_raster_map_", year.i, "_points2.tif", sep="")
+        ppMap <- semi_join(x = poccMap, y = ppMap, by = c("x", "y"))
+        fileName <- paste(outdir,"occupancy_raster_map_", year.i, "_points.tif", sep="")
         tiff(fileName)
-          plot(California)
+          plot(California, border = "darkgrey")
           points(poccMap_points[, 1:2], pch = 1, cex = poccMap_points$layer * 3)
-          points(ppMap[,1:2], pch = 16, cex = 3)
+          points(ppMap[,1:2], pch = 16, cex = ppMap$layer * 3)
         dev.off()
 }
 
