@@ -173,36 +173,8 @@ California <- spTransform(California, projection(Ref_raster))
 #### P(occupancy) values are averaged over 20 years for each cell
 yearsForMaps <- c(1920, 1950, 1990) # The years for which each raster map will begin
 nyears <- 20 # Number of years combined in each raster map
-#i <- 2
-for(i in 1:length(yearsForMaps)){
-        year.i <- yearsForMaps[i]
-        # Select only years of interest
-        rasterData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+nyears), c("year", "cellID", "pocc")]
-        print(year.i)
-        print(dim(table(rasterData$cellID, rasterData$year)))
-        # Average P(occupancy) over years for each cell
-        rasterSummary <- rasterData %>% group_by(cellID) %>% summarise(meanOcc = mean(pocc)) %>% as.data.frame()
-        # Use the empty raster to create an output raster
-        poccMap <- empty_raster_df
-        poccMap$layer[rasterSummary$cellID] <- rasterSummary$meanOcc
-        # Create raster from poccMap data.frame 
-        poccMap <- rasterFromXYZ(poccMap)
-        # Set extent as lat/long coordinates and plot
-        # extent(poccMap) <- extent(California)
-        fileName <- paste(outdir, "occupancy_raster_map_", year.i, ".tif", sep="")
-        tiff(fileName)
-        print(rasterVis::levelplot(poccMap, margin = FALSE, par.settings = GrTheme(region = brewer.pal(9, 'Greys'))) +
-                      latticeExtra::layer(sp.polygons(California)))
-        dev.off()
-        # # Alternative method of plotting both raster and California state border
-        # tiff(fileName)
-        #   plot(poccMap)
-        #   map("state", regions = c("california"), add = TRUE)
-        # dev.off()
-}
-
-
-# Make maps with different-sized points instead of raster cells
+i <- 2
+#### for loop to make maps with different-sized points instead of raster cells
 # The size of symbols are relative to the P(occupancy) value
 for(i in 1:length(yearsForMaps)){
         year.i <- yearsForMaps[i]
@@ -216,9 +188,46 @@ for(i in 1:length(yearsForMaps)){
         poccMap <- empty_raster_df
         poccMap$layer[rasterSummary$cellID] <- rasterSummary$meanOcc
         poccMap_points <- poccMap %>% dplyr::filter(complete.cases(.))
-        fileName <- paste(outdir,"occupancy_raster_map_", year.i, "_points.tif", sep="")
+        #### Add points for potato psyllid detections
+        ppData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+nyears) & detectData$detection == 1, c("year", "cellID")]
+        # CellIDs where potato psyllids were collected
+        ppData <- unique(ppData$cellID)
+        ppMap <- empty_raster_df
+        ppMap$layer[ppData] <- 1
+        ppMap <- ppMap %>% dplyr::filter(complete.cases(.))
+        fileName <- paste(outdir,"occupancy_raster_map_", year.i, "_points2.tif", sep="")
         tiff(fileName)
-        plot(California)
-        points(poccMap_points[, 1:2], pch = 16, cex = poccMap_points$layer * 2.5)
+          plot(California)
+          points(poccMap_points[, 1:2], pch = 1, cex = poccMap_points$layer * 3)
+          points(ppMap[,1:2], pch = 16, cex = 3)
         dev.off()
 }
+
+
+#### for loop to create P(occupancy) raster maps
+# for(i in 1:length(yearsForMaps)){
+#         year.i <- yearsForMaps[i]
+#         # Select only years of interest
+#         rasterData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+nyears), c("year", "cellID", "pocc")]
+#         print(year.i)
+#         print(dim(table(rasterData$cellID, rasterData$year)))
+#         # Average P(occupancy) over years for each cell
+#         rasterSummary <- rasterData %>% group_by(cellID) %>% summarise(meanOcc = mean(pocc)) %>% as.data.frame()
+#         # Use the empty raster to create an output raster
+#         poccMap <- empty_raster_df
+#         poccMap$layer[rasterSummary$cellID] <- rasterSummary$meanOcc
+#         # Create raster from poccMap data.frame 
+#         poccMap <- rasterFromXYZ(poccMap)
+#         # Set extent as lat/long coordinates and plot
+#         # extent(poccMap) <- extent(California)
+#         fileName <- paste(outdir, "occupancy_raster_map_", year.i, ".tif", sep="")
+#         tiff(fileName)
+#         print(rasterVis::levelplot(poccMap, margin = FALSE, par.settings = GrTheme(region = brewer.pal(9, 'Greys'))) +
+#                       latticeExtra::layer(sp.polygons(California)))
+#         dev.off()
+#         # # Alternative method of plotting both raster and California state border
+#         # tiff(fileName)
+#         #   plot(poccMap)
+#         #   map("state", regions = c("california"), add = TRUE)
+#         # dev.off()
+# }
