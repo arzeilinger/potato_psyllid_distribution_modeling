@@ -50,7 +50,7 @@ findCollectors <- function(focalSpecies = "Bactericera.cockerelli", dataset = Re
   # Remove useless entries
   spCollectors <- spCollectors[!spCollectors == ""]
   spCollectors <- spCollectors[!spCollectors == "unknown"]
-  fileName <- gsub(".", "_", focalSpecies) %>% paste("output/", ., "_collectors.rds", sep = "")
+  fileName <- gsub(".", "_", focalSpecies, fixed = TRUE) %>% paste("output/", ., "_collectors.rds", sep = "")
   saveRDS(spCollectors, fileName)
   return(spCollectors)
 }
