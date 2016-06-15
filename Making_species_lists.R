@@ -75,11 +75,6 @@ RawRecords$Locality <- as.character(RawRecords$Locality)
 RawRecords$Collector <- as.character(RawRecords$Collector)
 RawRecords$Error <- as.numeric(as.character(RawRecords$MaxErrorInMeters))
 
-# # Select only collectors of potato psyllids
-# ppCollectors <- unique(RawRecords[RawRecords$ScientificName == "Bactericera cockerelli", "Collector"])
-# ppCollectors <- ppCollectors[!ppCollectors == ""]
-# ppCollectors <- ppCollectors[!ppCollectors == "unknown"]
-# saveRDS(ppCollectors, "Potato psyllid/Potato psyllid data/potato_psyllid_collectors.rds")
 
 ##### DATA PROCESSING #####
 ## Process species records
@@ -88,6 +83,13 @@ RawRecords$Error <- as.numeric(as.character(RawRecords$MaxErrorInMeters))
 Records <- RawRecords
 # Edit species names
 Records$Species <- gsub(" ", ".", Records$Species)
+
+# Select and save collectors of focal species
+ppCollectors <- findCollectors("Bactericera.cockerelli")
+lygusCollectors <- findCollectors("Lygus.hesperus")
+Records$Species[Records$Species == "Myzus.(Nectarosiphon).persicae"] <- "Myzus.persicae"
+myzusCollectors <- findCollectors("Myzus.persicae")
+
 # Add important fields for filtering and combining observations
 Records$jdn <- strptime(as.POSIXct(Records$Date, format = "%Y-%m-%d"), format = "%Y-%m-%d")$yday+1 # Calculating julian date number from individual dates
 Records$Season <- factor(ifelse(Records$MonthCollected == 12 | Records$MonthCollected <= 2, "winter",
@@ -113,12 +115,13 @@ Records <- Records[Records$StateProvince == "California",]
 # Remove NAs
 Records <- Records[which(!is.na(Records$cellID) & !is.na(Records$Species)),]
 # Remove bad species names: ones without epithet or "undetermined"
-speciesNames <- unique(Records$ScientificName)
-badNames <- c(speciesNames[grep(" sp.", speciesNames, fixed = TRUE)],
+speciesNames <- unique(Records$Species)
+badNames <- c(speciesNames[grep(".sp.", speciesNames, fixed = TRUE)],
+              speciesNames[grep(".spp.", speciesNames, fixed = TRUE)],
               speciesNames[grep("undetermined", speciesNames)])
 badNames.i <- which(speciesNames %in% badNames)
 goodNames <- speciesNames[-badNames.i]
-Records <- Records[which(Records$ScientificName %in% goodNames),]
+Records <- Records[which(Records$Species %in% goodNames),]
 
 # Keep dataset of replicated Records
 duplRecords <- Records
@@ -131,7 +134,7 @@ Records <- Records[!duplicated(Records[c("Species", "collectionID")]),]
 #### Add climate data from BCM 2014 rasters
 ############################################################################
 ## Climate extraction functions
-source("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Climate data/Extract_climate_data_functions.R")
+source("R_functions/Extract_climate_data_functions.R")
 cdir <- "C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Climate data/BCM2014/Rasters"
 
 #### Note: For annual Tmin and Tmax, I'm using water year summaries.
@@ -164,13 +167,11 @@ Records <- Records %>% extractClimateMonthly(., colNames = c("DecimalLongitude",
 
 #################################################################################
 ## Make species lists from Essig, GBIF, and CDFA datasets
-## Two lists for Fithian's Proportional Bias model:
-## PALists = Presence-absence lists; POLists = presence-only lists
-#PALists <- make_lists(Records, 4)
-AllLists <- make_lists(Records, 1)
+#AllLists <- make_lists(Records, 1)
+longLists <- make_lists(Records, min.list.length = 3)
 speciesNames <- unique(Records$Species)
-saveRDS(AllLists, file = "output/All_Hemip_Lists_Climate_15km_Cells_2016-04-14.rds")
-
+#saveRDS(AllLists, file = "output/All_Hemip_Lists_Climate_15km_Cells_2016-04-14.rds")
+saveRDS(longLists, file = "output/Hemip_Long_Lists_Climate_15km_Cells_2016-06-14.rds")
 
 ##############################################################################################
 #### Exploring the cleaned data set of duplicated records
@@ -262,7 +263,7 @@ listdate <- listdate[!duplicated(listdate[c("Year", "Season")]),]
 
 ########################################################################################################
 ## Make figures for lab meeting
-ppRecords <- SArecords[SArecords$ScientificName == "Bactericera cockerelli" & SArecords$StateProvince == "California",]
+ppRecords <- SArecords[SArecords$Species == "Bactericera cockerelli" & SArecords$StateProvince == "California",]
 # map of all Stern + Auchen records
 tiff("results/figures/all_potato_psyllid_records_CAmap.tif")
   map("state", regions = c("california"))
@@ -296,7 +297,7 @@ CAcrop <- readWKT(CApolygon)
 CAraster <- crop(Ref_raster, CAcrop)
 plot(CAraster)
 CApoly <- rasterToPolygons(CAraster) 
-listpp <- listData[listData$ScientificName == "Bactericera cockerelli",]
+listpp <- listData[listData$Species == "Bactericera cockerelli",]
 tiff("results/figures/CA_polygon.tif")
   map("state", regions="california")
   lines(CApoly, lty = 2, col = "darkgrey")

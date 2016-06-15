@@ -44,6 +44,27 @@ detectDataFunc <- function(spLists, focalSpecies = "Bactericera.cockerelli"){
 }
 
 
+#### Select only collectors who also collected focal species
+findCollectors <- function(focalSpecies = "Bactericera.cockerelli", dataset = Records){
+  spCollectors <- unique(Records[Records$Species == focalSpecies, "Collector"])
+  # Remove useless entries
+  spCollectors <- spCollectors[!spCollectors == ""]
+  spCollectors <- spCollectors[!spCollectors == "unknown"]
+  fileName <- gsub(".", "_", focalSpecies) %>% paste("output/", ., "_collectors.rds", sep = "")
+  saveRDS(spCollectors, fileName)
+  return(spCollectors)
+}
+
+#### Select lists that contain one collector of the focal species
+onlyCollectors <- function(collectorNames = ppCollectors, dataset = longListsDF){
+  spCollections <- dataset[dataset$Collector %in% collectorNames, "collectionID"]
+  spData <- dataset[dataset$collectionID %in% spCollections,]
+  spLists <- spData %>% make_lists(., min.list.length = 3)
+  return(spLists)
+}
+
+
+
 # Make data matrices for JAGS GLMM with spatial random effect
 makeEcoDataMatrix <- function(var, data = detectData, fill = NA){
   dataf <- data[,c("ymo","cellID",var)]
