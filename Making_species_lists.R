@@ -75,19 +75,30 @@ RawRecords$Locality <- as.character(RawRecords$Locality)
 RawRecords$Collector <- as.character(RawRecords$Collector)
 RawRecords$Error <- as.numeric(as.character(RawRecords$MaxErrorInMeters))
 
-# # Select only collectors of potato psyllids
-# ppCollectors <- unique(RawRecords[RawRecords$ScientificName == "Bactericera cockerelli", "Collector"])
-# ppCollectors <- ppCollectors[!ppCollectors == ""]
-# ppCollectors <- ppCollectors[!ppCollectors == "unknown"]
-# saveRDS(ppCollectors, "Potato psyllid/Potato psyllid data/potato_psyllid_collectors.rds")
-
 ##### DATA PROCESSING #####
 ## Process species records
 # Remove records with a georeferencing error > 5000; need to keep points without georeference error measurements as 90% of records are NA
-# Records <- RawRecords[RawRecords$Error < 5000 | is.na(RawRecords$Error),]
-Records <- RawRecords
+Records <- RawRecords[RawRecords$Error < 5000 | is.na(RawRecords$Error),]
+# Records <- RawRecords
 # Edit species names
+# Merge Myzus persicae names
+Records$ScientificName[Records$ScientificName == "Myzus (Nectarosiphon) persicae"] <- "Myzus persicae"
 Records$Species <- gsub(" ", ".", Records$Species)
+
+# Make lists of only collectors of specific focal species 
+ppCollectors <- findCollectors("Bactericera.cockerelli")
+lygusCollectors <- findCollectors("Lygus.hesperus")
+myzusCollectors <- findCollectors("Myzus.persicae")
+
+# Remove bad species names: ones without epithet or "undetermined"
+speciesNames <- unique(Records$ScientificName)
+badNames <- c(speciesNames[grep(" sp.", speciesNames, fixed = TRUE)],
+              speciesNames[grep(" spp.", speciesNames, fixed = TRUE)],
+              speciesNames[grep("undetermined", speciesNames)])
+badNames.i <- which(speciesNames %in% badNames)
+goodNames <- speciesNames[-badNames.i]
+Records <- Records[which(Records$ScientificName %in% goodNames),]
+
 # Add important fields for filtering and combining observations
 Records$jdn <- strptime(as.POSIXct(Records$Date, format = "%Y-%m-%d"), format = "%Y-%m-%d")$yday+1 # Calculating julian date number from individual dates
 Records$Season <- factor(ifelse(Records$MonthCollected == 12 | Records$MonthCollected <= 2, "winter",
@@ -112,13 +123,6 @@ Records <- subset(Records, YearCollected >= 1900 & YearCollected < 2015)
 Records <- Records[Records$StateProvince == "California",]
 # Remove NAs
 Records <- Records[which(!is.na(Records$cellID) & !is.na(Records$Species)),]
-# Remove bad species names: ones without epithet or "undetermined"
-speciesNames <- unique(Records$ScientificName)
-badNames <- c(speciesNames[grep(" sp.", speciesNames, fixed = TRUE)],
-              speciesNames[grep("undetermined", speciesNames)])
-badNames.i <- which(speciesNames %in% badNames)
-goodNames <- speciesNames[-badNames.i]
-Records <- Records[which(Records$ScientificName %in% goodNames),]
 
 # Keep dataset of replicated Records
 duplRecords <- Records
@@ -131,7 +135,7 @@ Records <- Records[!duplicated(Records[c("Species", "collectionID")]),]
 #### Add climate data from BCM 2014 rasters
 ############################################################################
 ## Climate extraction functions
-source("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Climate data/Extract_climate_data_functions.R")
+source("output/Extract_climate_data_functions.R")
 cdir <- "C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Climate data/BCM2014/Rasters"
 
 #### Note: For annual Tmin and Tmax, I'm using water year summaries.
@@ -169,7 +173,7 @@ Records <- Records %>% extractClimateMonthly(., colNames = c("DecimalLongitude",
 #PALists <- make_lists(Records, 4)
 AllLists <- make_lists(Records, 1)
 speciesNames <- unique(Records$Species)
-saveRDS(AllLists, file = "output/All_Hemip_Lists_Climate_15km_Cells_2016-04-14.rds")
+saveRDS(AllLists, file = "output/All_Hemip_Lists_Climate_15km_Cells_2016-06-15.rds")
 
 
 ##############################################################################################
