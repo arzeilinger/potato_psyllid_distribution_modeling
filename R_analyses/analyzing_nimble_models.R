@@ -10,15 +10,15 @@ source("R_functions/museum_specimen_analysis_functions.R")
 
 #### FOR OCCUPANCY MODEL
 #### Loading saved MCMC run, saved as list, "samplesList"
-load(file = 'output/MCMC_month_list.RData')
+load(file = 'output/MCMC_month_list2.RData')
 # Directory for figures from occupancy model
 outdir <- "results/figures/occupancy_figures/"
 
 #### FOR GLMM MODEL
 #### Loading saved MCMC run, saved as list, "samplesList"
-# load(file = 'output/MCMC_glmm_list.RData')
-# # Directory for figures from glmm model
-# outdir <- "results/figures/glmm_figures/"
+load(file = 'output/MCMC_glmm_list2.RData')
+# Directory for figures from glmm model
+outdir <- "results/figures/glmm_figures/"
 
 
 #######################################################################
@@ -36,7 +36,11 @@ pd <- effectiveSize(mcmcs)
 # Combine into one table
 rhatSummary <- rhat[[1]] %>% round(., digits = 2) 
 rhatSummary <- paste(rhatSummary[,1], " (", rhatSummary[,2], ")", sep="")
-cbind(rhatSummary, round(pd, digits = 2))
+diagnostics <- cbind(rhatSummary, round(pd, digits = 2))
+diagnostics
+#write.csv(diagnostics, file = "results/occupancy_MCMC_diagnostics.csv", row.names = FALSE)
+
+write.csv(diagnostics, file = "results/glmm_MCMC_diagnostics.csv", row.names = FALSE)
 
 ## Posterior Density Plots
 pdf(paste(outdir, "trace_and_posterior_density_plots.pdf", sep=""))
@@ -57,23 +61,31 @@ results[1:15,] # Coefficient results
 # Make results table for ms
 resultsTable <- rbind(results[-grep("p_occ", results$params), c("mean", "cil", "ciu")]) %>% round(., digits = 2)
 resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
-# Save results for occupancy model
-saveRDS(results, "results/occupancy_model_results.rds")
+# # Save results for occupancy model
+# saveRDS(results, "results/occupancy_model_results.rds")
+# write.csv(results, file = "results/occupancy_model_results.csv", row.names = FALSE)
 
-# # Save results for glmm model
-# saveRDS(results, "results/glmm_model_results.rds")
+# Save results for glmm model
+saveRDS(results, "results/glmm_model_results.rds")
+write.csv(results, file = "results/glmm_model_results.csv", row.names = FALSE)
 
 ##############################################################################################################
 #### Plots
 
-# Load occupancy MCMC results
+# # Load occupancy MCMC results
 results <- readRDS("results/occupancy_model_results.rds")
+
+# Load GLMM MCMC results
+#results <- readRDS("results/glmm_model_results.rds")
+
 resultsPars <- results[-grep("p_occ", results$params), c("mean", "cil", "ciu", "params")]
+# Occupancy model covars
 resultsPars$covar <- c("det_intercept", "list_length", "year_list_length", "aet", "tmn", "tmx", "year", "month", "month2", NA, NA)
+# GLMM model covars
+#resultsPars$covar <- c("list_length", "year_list_length", "aet", "tmn", "tmx", "year", "month", "month2", NA, NA)
+
 resultsPars
 
-# # Load GLMM MCMC results
-# results <- readRDS("results/glmm_model_results.rds")
 
 #### Plotting P(occupancy) against covariates
 pocc <- results[grep("p_occ", results$params),]
@@ -102,7 +114,7 @@ tiff(paste(outdir,"list_length_vs_pocc.tif",sep=""))
        ylab = list("Probability of occupancy", cex = 1.4),
        cex.axis = 1.3)
   lines(smooth.spline(detectData$list_length, detectData$pocc, nknots = 4, tol = 1e-20), lwd = 2)
-  lines(llline$covar, llline$predOcc, lwd = 2, lty = 1)
+  #lines(llline$covar, llline$predOcc, lwd = 2, lty = 1)
 dev.off()
 
 
@@ -172,8 +184,8 @@ California <- spTransform(California, projection(Ref_raster))
 #### Replace cell values with P(occupancy) for cells with data
 #### P(occupancy) values are averaged over 20 years for each cell
 yearsForMaps <- c(1920, 1950, 1990) # The years for which each raster map will begin
-nyears <- 20 # Number of years combined in each raster map
-i <- 2
+nyears <- 25 # Number of years combined in each raster map
+#i <- 2
 #### for loop to make maps with different-sized points instead of raster cells
 # The size of symbols are relative to the P(occupancy) value
 for(i in 1:length(yearsForMaps)){
