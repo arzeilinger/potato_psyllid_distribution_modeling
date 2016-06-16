@@ -14,11 +14,11 @@ load(file = 'output/MCMC_month_list2.RData')
 # Directory for figures from occupancy model
 outdir <- "results/figures/occupancy_figures/"
 
-#### FOR GLMM MODEL
-#### Loading saved MCMC run, saved as list, "samplesList"
-load(file = 'output/MCMC_glmm_list2.RData')
-# Directory for figures from glmm model
-outdir <- "results/figures/glmm_figures/"
+# #### FOR GLMM MODEL
+# #### Loading saved MCMC run, saved as list, "samplesList"
+# load(file = 'output/MCMC_glmm_list2.RData')
+# # Directory for figures from glmm model
+# outdir <- "results/figures/glmm_figures/"
 
 
 #######################################################################
@@ -38,9 +38,10 @@ rhatSummary <- rhat[[1]] %>% round(., digits = 2)
 rhatSummary <- paste(rhatSummary[,1], " (", rhatSummary[,2], ")", sep="")
 diagnostics <- cbind(rhatSummary, round(pd, digits = 2))
 diagnostics
-#write.csv(diagnostics, file = "results/occupancy_MCMC_diagnostics.csv", row.names = FALSE)
 
-write.csv(diagnostics, file = "results/glmm_MCMC_diagnostics.csv", row.names = FALSE)
+# Save diagnostic results
+write.csv(diagnostics, file = "results/occupancy_MCMC_diagnostics.csv", row.names = FALSE)
+#write.csv(diagnostics, file = "results/glmm_MCMC_diagnostics.csv", row.names = FALSE)
 
 ## Posterior Density Plots
 pdf(paste(outdir, "trace_and_posterior_density_plots.pdf", sep=""))
@@ -58,34 +59,36 @@ names(results) <- c("mean", "cil", "ciu")
 results$params <- row.names(results)
 results[1:15,] # Coefficient results
 
-# Make results table for ms
-resultsTable <- rbind(results[-grep("p_occ", results$params), c("mean", "cil", "ciu")]) %>% round(., digits = 2)
-resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
-# # Save results for occupancy model
-# saveRDS(results, "results/occupancy_model_results.rds")
-# write.csv(results, file = "results/occupancy_model_results.csv", row.names = FALSE)
+# Save results for occupancy model
+saveRDS(results, "results/occupancy_model_results.rds")
 
-# Save results for glmm model
-saveRDS(results, "results/glmm_model_results.rds")
-write.csv(results, file = "results/glmm_model_results.csv", row.names = FALSE)
+# # Save results for glmm model
+# saveRDS(results, "results/glmm_model_results.rds")
 
 ##############################################################################################################
 #### Plots
 
-# # Load occupancy MCMC results
+# Load occupancy MCMC results
 results <- readRDS("results/occupancy_model_results.rds")
+covars <- c("det_intercept", "list_length", "year_list_length", "aet", "tmn", "tmx", "year", "month", "month2", NA, NA)
 
 # Load GLMM MCMC results
-#results <- readRDS("results/glmm_model_results.rds")
+# results <- readRDS("results/glmm_model_results.rds")
+# covars <- c("list_length", "year_list_length", "aet", "tmn", "tmx", "year", "month", "month2", NA, NA)
 
 resultsPars <- results[-grep("p_occ", results$params), c("mean", "cil", "ciu", "params")]
-# Occupancy model covars
-resultsPars$covar <- c("det_intercept", "list_length", "year_list_length", "aet", "tmn", "tmx", "year", "month", "month2", NA, NA)
-# GLMM model covars
-#resultsPars$covar <- c("list_length", "year_list_length", "aet", "tmn", "tmx", "year", "month", "month2", NA, NA)
-
+resultsPars$covar <- covars
 resultsPars
 
+# Make results table for ms
+resultsTable <- resultsPars[,c("mean", "cil", "ciu")] %>% round(., digits = 2) %>%
+  cbind(., resultsPars$covar)
+resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
+resultsTable
+
+# Save results table for ms
+write.csv(resultsTable, file = "results/occupancy_results_table_for_ms.csv", row.names = FALSE)
+#write.csv(resultsTable, file = "results/glmm_results_table_for_ms.csv", row.names = FALSE)
 
 #### Plotting P(occupancy) against covariates
 pocc <- results[grep("p_occ", results$params),]
