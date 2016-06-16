@@ -135,7 +135,7 @@ Records <- Records[!duplicated(Records[c("Species", "collectionID")]),]
 #### Add climate data from BCM 2014 rasters
 ############################################################################
 ## Climate extraction functions
-source("output/Extract_climate_data_functions.R")
+source("R_functions/Extract_climate_data_functions.R")
 cdir <- "C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project/Climate data/BCM2014/Rasters"
 
 #### Note: For annual Tmin and Tmax, I'm using water year summaries.
@@ -168,12 +168,11 @@ Records <- Records %>% extractClimateMonthly(., colNames = c("DecimalLongitude",
 
 #################################################################################
 ## Make species lists from Essig, GBIF, and CDFA datasets
-## Two lists for Fithian's Proportional Bias model:
-## PALists = Presence-absence lists; POLists = presence-only lists
-#PALists <- make_lists(Records, 4)
-AllLists <- make_lists(Records, 1)
+longLists <- make_lists(Records, min.list.length = 3)
+#AllLists <- make_lists(Records, 1)
 speciesNames <- unique(Records$Species)
-saveRDS(AllLists, file = "output/All_Hemip_Lists_Climate_15km_Cells_2016-06-15.rds")
+#saveRDS(AllLists, file = "output/All_Hemip_Lists_Climate_15km_Cells_2016-06-15.rds")
+saveRDS(longLists, file = "output/Hemip_Long_Lists_Climate_15km_Cells_2016-06-14.rds")
 
 
 ##############################################################################################

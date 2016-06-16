@@ -84,7 +84,7 @@ burnin <- 50000
 
 samplesList <- lapply(1:3, mcmcClusterFunction)
 
-save(samplesList, file = 'output/MCMC_month_list.RData')
+save(samplesList, file = 'output/MCMC_month_list2.RData')
 
 #### Loading saved MCMC run, sames as list, "samplesList"
 load(file = 'output/MCMC_month_list.RData')

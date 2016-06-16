@@ -13,11 +13,16 @@ source("R_functions/museum_specimen_analysis_functions.R")
 # Load species lists data set with climate data 
 AllLists <- readRDS("output/All_Hemip_Lists_Climate_15km_Cells_2016-04-14.rds")
 
+AllLists <- readRDS("output/All_Hemip_Lists_Climate_15km_Cells_2016-06-15.rds")
+
+
 # Collectors of potato psyllids, from RawRecords data set in making_species_lists
 ppCollectors <- readRDS("output/potato_psyllid_collectors.rds")
 
 # Keep only long lists (ll >= 3)
 longLists <- AllLists %>% rbindlist() %>% as.data.frame() %>% make_lists(., min.list.length = 3)
+
+longLists <- readRDS("output/Hemip_Long_Lists_Climate_15km_Cells_2016-06-14.rds")
 longListsDF <- longLists %>% rbindlist() %>% as.data.frame()
 
 # select only lists that contain collectors of potato psyllids
@@ -25,12 +30,15 @@ ppcCollections <- longListsDF[longListsDF$Collector %in% ppCollectors, "collecti
 ppcData <- longListsDF[longListsDF$collectionID %in% ppcCollections,]
 ppcLists <- ppcData %>% make_lists(., min.list.length = 3)
 
+ppcLists <- onlyCollectors(ppCollectors)
+
 # Transform to data frame with pp detection
 detectData <- detectDataFunc(ppcLists) 
 detectData <- dplyr::filter(detectData, !is.na(aet) & !is.na(cwd) & !is.na(tmn) & !is.na(tmx))
 detectData$lnlist_length <- log(detectData$list_length)
 detectData$seasonNum <- detectData$season %>% as.numeric() # Factor levels: 1 = autumn, 2 = spring, 3 = summer, 4 = winter
 str(detectData)
+table(detectData$detection)
 
 #### Exploring intercorrelations among climate variables
 climateVars <- detectData[,c("year", "aet", "cwd", "tmn", "tmx")]
@@ -38,7 +46,6 @@ tiff("results/figures/climate_variables_intercorrelations_plot.tif")
   pairs(climateVars)
 dev.off()
 # CWD is highly correlated with AET, probably should drop CWD
-
 
 # standardize numeric covariates, include as new variables in data frame
 covars <- c("year", "month", "lnlist_length", "aet", "cwd", "tmn", "tmx")
@@ -81,7 +88,8 @@ nimbleData <- with(detectData,
                         y = detection,
                         siteID = siteID))
 saveRDS(nimbleData, file = "output/data_nimble_zib.rds")
-saveRDS(nimbleData, file = "../zib_glmm/data/data_nimble_zib.rds")
+
+#saveRDS(nimbleData, file = "../zib_glmm/data/data_nimble_zib.rds")
 
 
 
