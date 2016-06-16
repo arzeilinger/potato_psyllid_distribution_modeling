@@ -14,11 +14,11 @@ load(file = 'output/MCMC_month_list2.RData')
 # Directory for figures from occupancy model
 outdir <- "results/figures/occupancy_figures/"
 
-# #### FOR GLMM MODEL
-# #### Loading saved MCMC run, saved as list, "samplesList"
-# load(file = 'output/MCMC_glmm_list2.RData')
-# # Directory for figures from glmm model
-# outdir <- "results/figures/glmm_figures/"
+#### FOR GLMM MODEL
+#### Loading saved MCMC run, saved as list, "samplesList"
+load(file = 'output/MCMC_glmm_list2.RData')
+# Directory for figures from glmm model
+outdir <- "results/figures/glmm_figures/"
 
 
 #######################################################################
@@ -40,8 +40,8 @@ diagnostics <- cbind(rhatSummary, round(pd, digits = 2))
 diagnostics
 
 # Save diagnostic results
-write.csv(diagnostics, file = "results/occupancy_MCMC_diagnostics.csv", row.names = FALSE)
-#write.csv(diagnostics, file = "results/glmm_MCMC_diagnostics.csv", row.names = FALSE)
+write.csv(diagnostics, file = "results/occupancy_MCMC_diagnostics.csv", row.names = TRUE)
+write.csv(diagnostics, file = "results/glmm_MCMC_diagnostics.csv", row.names = TRUE)
 
 ## Posterior Density Plots
 pdf(paste(outdir, "trace_and_posterior_density_plots.pdf", sep=""))

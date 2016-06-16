@@ -199,6 +199,7 @@ all_hemip_histogram <- ggplot(duplRecords,aes(x=YearCollected)) +
   xlab("Year collected") + ylab("Frequency") + 
   theme_bw() + 
   theme(axis.line = element_line(colour = "black"),
+        text = element_text(size = 20),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         #panel.border = element_blank(),

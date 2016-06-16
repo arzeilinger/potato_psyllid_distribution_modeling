@@ -4,7 +4,7 @@
 
 rm(list = ls())
 #### Preliminaries
-my_packages<-c('data.table', 'tidyr', 'lattice', 'dplyr')
+my_packages<-c('data.table', 'tidyr', 'lattice', 'dplyr', 'ggplot2')
 lapply(my_packages, require, character.only=T)
 
 ## load functions
@@ -125,6 +125,7 @@ list_length_histogram <- ggplot(detectData,aes(x=list_length)) +
   xlab("List length") + ylab("Frequency") + 
   theme_bw() + 
   theme(axis.line = element_line(colour = "black"),
+        text = element_text(size = 20),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         #panel.border = element_blank(),
