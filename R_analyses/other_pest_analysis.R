@@ -15,19 +15,21 @@ longLists <- readRDS("output/Hemip_Long_Lists_Climate_15km_Cells_2016-06-14.rds"
 
 # Make into dataframe
 longListsDF <- longLists %>% rbindlist() %>% as.data.frame()
+longListsDF$Species[longListsDF$Species == "Myzus.(Nectarosiphon).persicae"] <- "Myzus.persicae"
 
 speciesFreq <- as.data.frame(table(longListsDF$Species))
 speciesFreq <- speciesFreq[order(speciesFreq$Freq),]
 tail(speciesFreq)
 # Lygus hesperus and Myzus persicae are pests best represented in data set
 
+longLists <- make_lists(longListsDF, min.list.length = 3)
 
 ######################################################################
 #### Analysis of Lygus hesperus occupancy
 ######################################################################
 
 # Collectors of potato psyllids, from RawRecords data set in making_species_lists
-lygusCollectors <- readRDS("output/lygus.hesperus_collectors.rds")
+lygusCollectors <- readRDS("output/lygus_hesperus_collectors.rds")
 # select only lists that contain collectors of potato psyllids
 lygusLists <- onlyCollectors(lygusCollectors)
 
@@ -85,19 +87,19 @@ saveRDS(nimbleData, file = "output/lygus_data_nimble_occupancy.rds")
 
 #### Histogram of list length
 # Just potato psyllid occurrences
-lhData <- detectData[detectData$detection == 1,]
-
-list_length_histogram <- ggplot(detectData,aes(x=list_length)) + 
-  geom_histogram(fill = "darkgrey", alpha = 1, binwidth = 1) +
-  geom_histogram(data=subset(detectData,detection == 1),fill = "black", alpha = 1, binwidth = 1) +
-  xlab("List length") + ylab("Frequency") + 
-  theme_bw() + 
-  theme(axis.line = element_line(colour = "black"),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        #panel.border = element_blank(),
-        panel.background = element_blank()) 
-list_length_histogram
+# lhData <- detectData[detectData$detection == 1,]
+# 
+# list_length_histogram <- ggplot(detectData,aes(x=list_length)) + 
+#   geom_histogram(fill = "darkgrey", alpha = 1, binwidth = 1) +
+#   geom_histogram(data=subset(detectData,detection == 1),fill = "black", alpha = 1, binwidth = 1) +
+#   xlab("List length") + ylab("Frequency") + 
+#   theme_bw() + 
+#   theme(axis.line = element_line(colour = "black"),
+#         panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         #panel.border = element_blank(),
+#         panel.background = element_blank()) 
+# list_length_histogram
 
 #ggsave(filename = "results/figures/list_length_histogram.tiff", plot = list_length_histogram)
 
@@ -183,15 +185,15 @@ Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 
 
 #### Run MCMC with 150,000 iterations and 50,000 burn-in
-niter <- 50000
-burnin <- 1000
+niter <- 150000
+burnin <- 50000
 
-samplesList <- lapply(1:2, mcmcClusterFunction)
+samplesList <- lapply(1, mcmcClusterFunction)
 
 save(samplesList, file = 'output/lygus_MCMC_list.RData')
 
 #### Loading saved MCMC run, sames as list, "samplesList"
-load(file = 'output/lygus_MCMC_list.RData')
+#load(file = 'output/lygus_MCMC_list.RData')
 
 
 #######################################################################################
@@ -209,10 +211,10 @@ resultsPars$covar <- c("det_intercept", "list_length", "year_list_length", "aet"
 lygusResults <- resultsPars
 lygusResults
 
-# Make results table for ms
-resultsTable <- rbind(results[-grep("p_occ", results$params), c("mean", "cil", "ciu")]) %>% round(., digits = 2)
-resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
-
+# # Make results table for ms
+# resultsTable <- rbind(results[-grep("p_occ", results$params), c("mean", "cil", "ciu")]) %>% round(., digits = 2)
+# resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
+# resultsTable
 
 
 
@@ -222,7 +224,7 @@ resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]"
 ######################################################################
 
 # Collectors of potato psyllids, from RawRecords data set in making_species_lists
-myzusCollectors <- readRDS("output/myzus.persicae_collectors.rds")
+myzusCollectors <- readRDS("output/myzus_persicae_collectors.rds")
 # select only lists that contain collectors of potato psyllids
 myzusLists <- onlyCollectors(myzusCollectors)
 
@@ -356,10 +358,10 @@ Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 
 
 #### Run MCMC with 150,000 iterations and 50,000 burn-in
-niter <- 50000
-burnin <- 1000
+niter <- 150000
+burnin <- 50000
 
-samplesList <- lapply(1:2, mcmcClusterFunction)
+samplesList <- lapply(1, mcmcClusterFunction)
 
 save(samplesList, file = 'output/myzus_MCMC_list.RData')
 
@@ -380,7 +382,7 @@ resultsPars <- results[-grep("p_occ", results$params), c("mean", "cil", "ciu", "
 resultsPars$covar <- c("det_intercept", "list_length", "year_list_length", "aet", "tmn", "tmx", "year", "month", "month2", NA, NA)
 myzusResults <- resultsPars
 myzusResults
-
-# Make results table for ms
-resultsTable <- rbind(results[-grep("p_occ", results$params), c("mean", "cil", "ciu")]) %>% round(., digits = 2)
-resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
+# 
+# # Make results table for ms
+# resultsTable <- rbind(results[-grep("p_occ", results$params), c("mean", "cil", "ciu")]) %>% round(., digits = 2)
+# resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
