@@ -209,13 +209,13 @@ results$params <- row.names(results)
 resultsPars <- results[-grep("p_occ", results$params), c("mean", "cil", "ciu", "params")]
 resultsPars$covar <- c("det_intercept", "list_length", "year_list_length", "aet", "tmn", "tmx", "year", "month", "month2", NA, NA)
 lygusResults <- resultsPars
-lygusResults
 
-# # Make results table for ms
-# resultsTable <- rbind(results[-grep("p_occ", results$params), c("mean", "cil", "ciu")]) %>% round(., digits = 2)
-# resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
-# resultsTable
-
+# Make results table for ms
+lygusTable <- lygusResults[, c("mean", "cil", "ciu")] %>% round(., digits = 2) %>%
+  cbind(., lygusResults$covar)
+lygusTable$summary <- with(lygusTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
+write.csv(lygusTable, file = "results/lygus_occupancy_results_for_ms.csv", row.names = TRUE)
+lygusTable
 
 
 
@@ -381,8 +381,12 @@ results$params <- row.names(results)
 resultsPars <- results[-grep("p_occ", results$params), c("mean", "cil", "ciu", "params")]
 resultsPars$covar <- c("det_intercept", "list_length", "year_list_length", "aet", "tmn", "tmx", "year", "month", "month2", NA, NA)
 myzusResults <- resultsPars
-myzusResults
-# 
-# # Make results table for ms
-# resultsTable <- rbind(results[-grep("p_occ", results$params), c("mean", "cil", "ciu")]) %>% round(., digits = 2)
-# resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
+
+# Make results table for ms
+myzusTable <- myzusResults[, c("mean", "cil", "ciu")] %>% round(., digits = 2) %>%
+  cbind(., myzusResults$covar)
+myzusTable$summary <- with(myzusTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
+write.csv(myzusTable, file = "results/myzus_occupancy_results_for_ms.csv", row.names = TRUE)
+
+lygusTable
+myzusTable
