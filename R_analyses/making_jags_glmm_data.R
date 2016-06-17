@@ -16,29 +16,10 @@ longLists <- readRDS("output/Hemip_Long_Lists_Climate_15km_Cells_2016-06-14.rds"
 # Make into dataframe
 longListsDF <- longLists %>% rbindlist() %>% as.data.frame()
 
-AllLists <- readRDS("output/All_Hemip_Lists_Climate_15km_Cells_2016-06-15.rds")
-
-
 # Collectors of potato psyllids, from RawRecords data set in making_species_lists
 ppCollectors <- readRDS("output/Bactericera_cockerelli_collectors.rds")
 # select only lists that contain collectors of potato psyllids
 ppLists <- onlyCollectors(ppCollectors)
-
-<<<<<<< HEAD
-# Keep only long lists (ll >= 3)
-longLists <- AllLists %>% rbindlist() %>% as.data.frame() %>% make_lists(., min.list.length = 3)
-
-longLists <- readRDS("output/Hemip_Long_Lists_Climate_15km_Cells_2016-06-14.rds")
-longListsDF <- longLists %>% rbindlist() %>% as.data.frame()
-=======
->>>>>>> multiple_pests
-
-# select only lists that contain collectors of potato psyllids
-ppcCollections <- longListsDF[longListsDF$Collector %in% ppCollectors, "collectionID"]
-ppcData <- longListsDF[longListsDF$collectionID %in% ppcCollections,]
-ppcLists <- ppcData %>% make_lists(., min.list.length = 3)
-
-ppcLists <- onlyCollectors(ppCollectors)
 
 # Transform to data frame with pp detection
 detectData <- detectDataFunc(ppLists) 
@@ -47,10 +28,7 @@ detectData$lnlist_length <- log(detectData$list_length)
 detectData$seasonNum <- detectData$season %>% as.numeric() # Factor levels: 1 = autumn, 2 = spring, 3 = summer, 4 = winter
 str(detectData)
 table(detectData$detection)
-<<<<<<< HEAD
 
-=======
->>>>>>> multiple_pests
 #### Exploring intercorrelations among climate variables
 climateVars <- detectData[,c("year", "aet", "cwd", "tmn", "tmx")]
 tiff("results/figures/climate_variables_intercorrelations_plot.tif")

@@ -75,10 +75,7 @@ RawRecords$Locality <- as.character(RawRecords$Locality)
 RawRecords$Collector <- as.character(RawRecords$Collector)
 RawRecords$Error <- as.numeric(as.character(RawRecords$MaxErrorInMeters))
 
-<<<<<<< HEAD
-=======
 
->>>>>>> multiple_pests
 ##### DATA PROCESSING #####
 ## Process species records
 # Remove records with a georeferencing error > 5000; need to keep points without georeference error measurements as 90% of records are NA
@@ -89,7 +86,6 @@ Records <- RawRecords[RawRecords$Error < 5000 | is.na(RawRecords$Error),]
 Records$ScientificName[Records$ScientificName == "Myzus (Nectarosiphon) persicae"] <- "Myzus persicae"
 Records$Species <- gsub(" ", ".", Records$Species)
 
-<<<<<<< HEAD
 # Make lists of only collectors of specific focal species 
 ppCollectors <- findCollectors("Bactericera.cockerelli")
 lygusCollectors <- findCollectors("Lygus.hesperus")
@@ -104,14 +100,6 @@ badNames.i <- which(speciesNames %in% badNames)
 goodNames <- speciesNames[-badNames.i]
 Records <- Records[which(Records$ScientificName %in% goodNames),]
 
-=======
-# Select and save collectors of focal species
-ppCollectors <- findCollectors("Bactericera.cockerelli")
-lygusCollectors <- findCollectors("Lygus.hesperus")
-Records$Species[Records$Species == "Myzus.(Nectarosiphon).persicae"] <- "Myzus.persicae"
-myzusCollectors <- findCollectors("Myzus.persicae")
-
->>>>>>> multiple_pests
 # Add important fields for filtering and combining observations
 Records$jdn <- strptime(as.POSIXct(Records$Date, format = "%Y-%m-%d"), format = "%Y-%m-%d")$yday+1 # Calculating julian date number from individual dates
 Records$Season <- factor(ifelse(Records$MonthCollected == 12 | Records$MonthCollected <= 2, "winter",
@@ -136,17 +124,6 @@ Records <- subset(Records, YearCollected >= 1900 & YearCollected < 2015)
 Records <- Records[Records$StateProvince == "California",]
 # Remove NAs
 Records <- Records[which(!is.na(Records$cellID) & !is.na(Records$Species)),]
-<<<<<<< HEAD
-=======
-# Remove bad species names: ones without epithet or "undetermined"
-speciesNames <- unique(Records$Species)
-badNames <- c(speciesNames[grep(".sp.", speciesNames, fixed = TRUE)],
-              speciesNames[grep(".spp.", speciesNames, fixed = TRUE)],
-              speciesNames[grep("undetermined", speciesNames)])
-badNames.i <- which(speciesNames %in% badNames)
-goodNames <- speciesNames[-badNames.i]
-Records <- Records[which(Records$Species %in% goodNames),]
->>>>>>> multiple_pests
 
 # Keep dataset of replicated Records
 duplRecords <- Records
@@ -192,20 +169,11 @@ Records <- Records %>% extractClimateMonthly(., colNames = c("DecimalLongitude",
 
 #################################################################################
 ## Make species lists from Essig, GBIF, and CDFA datasets
-<<<<<<< HEAD
 longLists <- make_lists(Records, min.list.length = 3)
 #AllLists <- make_lists(Records, 1)
 speciesNames <- unique(Records$Species)
 #saveRDS(AllLists, file = "output/All_Hemip_Lists_Climate_15km_Cells_2016-06-15.rds")
 saveRDS(longLists, file = "output/Hemip_Long_Lists_Climate_15km_Cells_2016-06-14.rds")
-
-=======
-#AllLists <- make_lists(Records, 1)
-longLists <- make_lists(Records, min.list.length = 3)
-speciesNames <- unique(Records$Species)
-#saveRDS(AllLists, file = "output/All_Hemip_Lists_Climate_15km_Cells_2016-04-14.rds")
-saveRDS(longLists, file = "output/Hemip_Long_Lists_Climate_15km_Cells_2016-06-14.rds")
->>>>>>> multiple_pests
 
 ##############################################################################################
 #### Exploring the cleaned data set of duplicated records
