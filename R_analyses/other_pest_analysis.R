@@ -188,7 +188,7 @@ Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 niter <- 150000
 burnin <- 50000
 
-samplesList <- lapply(1, mcmcClusterFunction)
+samplesList <- lapply(1:3, mcmcClusterFunction)
 
 save(samplesList, file = 'output/lygus_MCMC_list.RData')
 
@@ -361,7 +361,7 @@ Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 niter <- 150000
 burnin <- 50000
 
-samplesList <- lapply(1, mcmcClusterFunction)
+samplesList <- lapply(1:3, mcmcClusterFunction)
 
 save(samplesList, file = 'output/myzus_MCMC_list.RData')
 
