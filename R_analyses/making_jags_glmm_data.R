@@ -37,7 +37,8 @@ dev.off()
 # CWD is highly correlated with AET, probably should drop CWD
 
 # standardize numeric covariates, include as new variables in data frame
-covars <- c("year", "month", "lnlist_length", "aet", "cwd", "tmn", "tmx")
+detectData$month2 <- detectData$month^2
+covars <- c("year", "month", "lnlist_length", "aet", "cwd", "tmn", "tmx", "month2")
 covars.i <- as.numeric(sapply(covars, function(x) which(names(detectData) == x), simplify = TRUE))
 for(i in covars.i){
   var.i <- names(detectData)[i]
@@ -45,11 +46,14 @@ for(i in covars.i){
   stdvar.i <- standardize(detectData[,var.i])
   detectData[,stdname.i] <- stdvar.i
 }
+str(detectData)
+
 
 # Additional covariates for quadratic effects and interactions
-detectData$stdmonth2 <- detectData$stdmonth^2
-detectData$stdllyr <- detectData$stdlnlist_length*detectData$stdyear
-str(detectData)
+detectData$llyr <- detectData$stdlnlist_length*detectData$stdyear
+detectData$yearmonth <- detectData$stdyear*detectData$stdmonth
+detectData$yearmonth2 <- detectData$stdyear*detectData$stdmonth*detectData$stdmonth
+
 
 # Save detectData
 saveRDS(detectData, file = "output/potato_psyllid_detection_dataset.rds")
@@ -73,7 +77,9 @@ nimbleData <- with(detectData,
                         month2 = stdmonth2,
                         season = seasonNum,
                         list_length = stdlnlist_length,
-                        year_list_length = stdllyr,
+                        year_list_length = llyr,
+                        year_month = yearmonth,
+                        year_month2 = yearmonth2,
                         y = detection,
                         siteID = siteID))
 saveRDS(nimbleData, file = "output/data_nimble_zib.rds")
@@ -136,4 +142,19 @@ for(i in 1:ncol(climatesd)){
   print(names(climatesd)[i])
   print(mean(climatesd[,i], na.rm = TRUE))
   print(median(climatesd[,i], na.rm = TRUE))
+}
+
+
+##############################################################################################
+#### Variation in climate variables over whole data set
+#### Using the data set imported at the top: output/Hemip_Long_Lists_Climate_15km_Cells_2016-06-14.rds
+
+hist(longListsDF$aet)
+hist(longListsDF$tmn)
+hist(longListsDF$tmx)
+
+for(i in 1:ncol(climateVars)){
+  print(names(climateVars)[i])
+  print(mean(climateVars[,i], na.rm = TRUE))
+  print(sd(climateVars[,i]))
 }

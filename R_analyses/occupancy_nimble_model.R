@@ -71,7 +71,8 @@ spec$addSampler('beta[4:9]', 'RW_block') # occupancy sub-model sampler
 spec$removeSamplers('sigma_alpha')
 spec$addSampler('sigma_alpha', 'RW_log_shift', list(shiftNodes='alpha')) # random effect sampler
 spec$getSamplers() # Check samplers
-spec$addMonitors('p_occ') # add a monitor to get p_occ in output
+spec$addMonitors(c('p_occ')) # add a monitor to get p_occ in output
+#spec$addMonitors(c('p_obs')) # add a monitor to get p_obs in output
 
 #### Compile MCMC in R and C++
 Rmcmc <- buildMCMC(spec)
@@ -84,10 +85,10 @@ burnin <- 50000
 
 samplesList <- lapply(1:3, mcmcClusterFunction)
 
-save(samplesList, file = 'output/MCMC_month_list2.RData')
+save(samplesList, file = 'output/MCMC_list_climate_pocc.RData')
 
 #### Loading saved MCMC run, sames as list, "samplesList"
-load(file = 'output/MCMC_month_list.RData')
+#load(file = 'output/MCMC_month_list.RData')
 
 
 #######################################################################
@@ -115,7 +116,7 @@ results <- as.data.frame(cbind(apply(samplesList[[1]], 2, mean),
                                apply(samplesList[[1]], 2, function(x) quantile(x, 0.975))))
 names(results) <- c("mean", "cil", "ciu")
 results$params <- row.names(results)
-results[1:15,] # Coefficient results
+print(results[1:15,]) # Coefficient results
 
 
 ##############################################################################################################

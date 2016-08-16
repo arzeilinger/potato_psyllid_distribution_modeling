@@ -9,16 +9,17 @@ lapply(my.packages, require, character.only = TRUE)
 source("R_functions/museum_specimen_analysis_functions.R")
 
 #### FOR OCCUPANCY MODEL
-#### Loading saved MCMC run, saved as list, "samplesList"
-load(file = 'output/MCMC_month_list2.RData')
+#### Loading saved MCMC run with pocc, saved as list, "samplesList"
+#### For MCMC run with pobs monitored, see Making Detection Figure below
+load(file = 'output/MCMC_list_climate_pocc.RData')
 # Directory for figures from occupancy model
 outdir <- "results/figures/occupancy_figures/"
 
-#### FOR GLMM MODEL
-#### Loading saved MCMC run, saved as list, "samplesList"
-load(file = 'output/MCMC_glmm_list2.RData')
-# Directory for figures from glmm model
-outdir <- "results/figures/glmm_figures/"
+# #### FOR GLMM MODEL
+# #### Loading saved MCMC run, saved as list, "samplesList"
+# load(file = 'output/MCMC_glmm_list2.RData')
+# # Directory for figures from glmm model
+# outdir <- "results/figures/glmm_figures/"
 
 
 #######################################################################
@@ -41,7 +42,7 @@ diagnostics
 
 # Save diagnostic results
 write.csv(diagnostics, file = "results/occupancy_MCMC_diagnostics.csv", row.names = TRUE)
-write.csv(diagnostics, file = "results/glmm_MCMC_diagnostics.csv", row.names = TRUE)
+#write.csv(diagnostics, file = "results/glmm_MCMC_diagnostics.csv", row.names = TRUE)
 
 ## Posterior Density Plots
 pdf(paste(outdir, "trace_and_posterior_density_plots.pdf", sep=""))
@@ -81,7 +82,7 @@ resultsPars$covar <- covars
 resultsPars
 
 # Make results table for ms
-resultsTable <- resultsPars[,c("mean", "cil", "ciu")] %>% round(., digits = 2) %>%
+resultsTable <- resultsPars[,c("mean", "cil", "ciu")] %>% signif(., digits = 3) %>%
   cbind(., resultsPars$covar)
 resultsTable$summary <- with(resultsTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
 resultsTable
@@ -106,18 +107,6 @@ tiff(paste(outdir,"year_vs_pocc.tif",sep=""))
   lines(smooth.spline(detectData$year, detectData$pocc, nknots = 4, tol = 1e-6, df = 3), lwd = 2)
   #lines(yearline$covar, yearline$predOcc, lwd = 2, lty = 1)
   #abline(lm(detectData$pocc ~ detectData$year), lty = 1, lwd = 2)
-dev.off()
-  
-
-#### List length vs P(occupancy)
-llline <- coefline("list_length", "stdlnlist_length")
-tiff(paste(outdir,"list_length_vs_pocc.tif",sep=""))
-  plot(x = detectData$list_length, y = detectData$pocc,
-       xlab = list("Length of species lists", cex = 1.4), 
-       ylab = list("Probability of occupancy", cex = 1.4),
-       cex.axis = 1.3)
-  lines(smooth.spline(detectData$list_length, detectData$pocc, nknots = 4, tol = 1e-20), lwd = 2)
-  #lines(llline$covar, llline$predOcc, lwd = 2, lty = 1)
 dev.off()
 
 
@@ -247,3 +236,35 @@ for(i in 1:length(yearsForMaps)){
 #         #   map("state", regions = c("california"), add = TRUE)
 #         # dev.off()
 # }
+
+
+
+############################################################################################
+#### Making Detection Figures
+#### Results for detection sub-model
+
+load(file = 'output/MCMC_list_climate_pobs.RData')
+# Directory for figures from occupancy model
+#outdir <- "results/figures/occupancy_figures/"
+
+pobsResults <- as.data.frame(cbind(apply(samplesList[[2]], 2, mean),
+                                   apply(samplesList[[2]], 2, function(x) quantile(x, 0.025)),
+                                   apply(samplesList[[2]], 2, function(x) quantile(x, 0.975))))
+names(pobsResults) <- c("mean", "cil", "ciu")
+pobsResults$params <- row.names(pobsResults)
+pobsResults[1:15,]
+
+# Load detection data set
+#detectData <- readRDS("output/potato_psyllid_detection_dataset.rds")
+detectData$pobs <- pobsResults[grep("p_obs", pobsResults$params),]$mean
+
+#### List length vs P(occupancy)
+llline <- coefline("list_length", "stdlnlist_length")
+tiff(paste(outdir,"list_length_vs_pocc.tif",sep=""))
+  plot(x = detectData$list_length, y = detectData$pobs,
+       xlab = list("Length of species lists", cex = 1.4), 
+       ylab = list("Probability of detection", cex = 1.4),
+       cex.axis = 1.3, ylim = c(0,1))
+  lines(smooth.spline(detectData$list_length, detectData$pobs, nknots = 4, tol = 1e-20), lwd = 2)
+  #lines(llline$covar, llline$predOcc, lwd = 2, lty = 1)
+dev.off()
