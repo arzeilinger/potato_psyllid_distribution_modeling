@@ -158,3 +158,33 @@ for(i in 1:ncol(climateVars)){
   print(mean(climateVars[,i], na.rm = TRUE))
   print(sd(climateVars[,i]))
 }
+
+
+#### What proportion of data points had tmn < 7 deg C (developmental threshold of potato psyllid)?
+hist(detectData$tmn)
+nbt <- detectData$tmn[detectData$tmn < 7] %>% length()
+propbt <- nbt/length(detectData$tmn)
+
+
+detectData$belowThreshold <- ifelse(detectData$tmn < 7, 1, 0)
+table(detectData$detection, detectData$belowThreshold)
+with(detectData, chisq.test(detection, belowThreshold, simulate.p.value = TRUE))
+
+
+#### Contributions of different collections
+longListsDF[grep("CDFA", longListsDF$UID),] %>% nrow()
+longListsDF[grep("AMNH", longListsDF$UID),] %>% nrow()
+
+
+#### Prepare data set for archiving
+#### Use longListsDF-- includes BCM data and duplicate records have been filtered out
+archiveData <- longListsDF[,c("Species", "Family", "DecimalLongitude", "DecimalLatitude", "MaxErrorInMeters",
+                              "County", "Locality", "Collector", "Associated_Taxon", "UID", "Date", "site", "cellID", "collectionID",
+                              "aet", "cwd", "tmn", "tmx")]
+# CDFA PPDC data
+ppdc <- archiveData[grep("CDFA", archiveData$UID),]
+write.csv(ppdc, file = "output/CDFA_records_for_archiving.csv", row.names = FALSE)
+
+# AMNH data
+amnh <- archiveData[grep("AMNH", archiveData$UID),]
+write.csv(amnh, file = "output/AMNH_records_for_archiving.csv", row.names = FALSE)

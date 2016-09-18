@@ -193,7 +193,7 @@ samplesList <- lapply(1:3, mcmcClusterFunction)
 save(samplesList, file = 'output/lygus_MCMC_list.RData')
 
 #### Loading saved MCMC run, sames as list, "samplesList"
-#load(file = 'output/lygus_MCMC_list.RData')
+load(file = 'output/lygus_MCMC_list.RData')
 
 
 #######################################################################################
@@ -386,6 +386,7 @@ myzusResults <- resultsPars
 myzusTable <- myzusResults[, c("mean", "cil", "ciu")] %>% round(., digits = 2) %>%
   cbind(., myzusResults$covar)
 myzusTable$summary <- with(myzusTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
+
 write.csv(myzusTable, file = "results/myzus_occupancy_results_for_ms.csv", row.names = TRUE)
 
 lygusTable
