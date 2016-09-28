@@ -91,6 +91,26 @@ resultsTable
 write.csv(resultsTable, file = "results/occupancy_results_table_for_ms.csv", row.names = FALSE)
 #write.csv(resultsTable, file = "results/glmm_results_table_for_ms.csv", row.names = FALSE)
 
+
+#### Plotting coefficient estimates
+plotPars <- resultsPars[!is.na(resultsPars$covar),]
+coef_plot <- ggplot(plotPars, aes(y = params, x = mean)) +
+  geom_errorbarh(aes(xmin = cil, xmax = ciu), colour = "black", height = 0.2) +
+  geom_point(size = 3) +
+  geom_vline(linetype = "longdash", xintercept = 0) +
+  xlab("Coefficient estimate") + ylab("Covariate") + 
+  theme_bw() + 
+  theme(axis.line = element_line(colour = "black"),
+        text = element_text(size = 20),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour = "black"),
+        panel.background = element_blank()) 
+#coef_plot
+ggsave(filename = paste(outdir,"coefficient_plot.tiff",sep=""), 
+       plot = coef_plot,
+       width = 7, height = 7, units = "in")
+
 #### Plotting P(occupancy) against covariates
 pocc <- results[grep("p_occ", results$params),]
 # Load detection data set

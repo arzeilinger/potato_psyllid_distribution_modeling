@@ -29,12 +29,6 @@ detectData$seasonNum <- detectData$season %>% as.numeric() # Factor levels: 1 = 
 str(detectData)
 table(detectData$detection)
 
-#### Exploring intercorrelations among climate variables
-climateVars <- detectData[,c("year", "aet", "cwd", "tmn", "tmx")]
-tiff("results/figures/climate_variables_intercorrelations_plot.tif")
-  pairs(climateVars)
-dev.off()
-# CWD is highly correlated with AET, probably should drop CWD
 
 # standardize numeric covariates, include as new variables in data frame
 detectData$month2 <- detectData$month^2
@@ -130,6 +124,31 @@ ggsave(filename = "results/figures/list_length_histogram.tiff", plot = list_leng
 
 
 #############################################################################################
+#### Exploring intercorrelations among climate variables
+climateVars <- detectData[,c("year", "aet", "cwd", "tmn", "tmx")]
+tiff("results/figures/climate_variables_intercorrelations_plot.tif")
+  pairs(climateVars)
+dev.off()
+# CWD is highly correlated with AET, probably should drop CWD
+
+
+#### Year vs. climate variables
+climateVars <- c("aet", "tmn", "tmx")
+outdir <- "results/figures/"
+for(i in 1:length(climateVars)){
+  var.i <- climateVars[i]
+  print(var.i)
+  fileName <- paste(outdir,"plot_year_vs_", var.i, ".tif", sep="")
+  tiff(fileName)
+    plot(y = detectData[, var.i], x = detectData$year, 
+         pch = 16, col = "black",
+         ylab = var.i, xlab = "Year")
+    lines(smooth.spline(detectData$year, detectData[, var.i], nknots = 4, tol = 1e-6), lwd = 2, col = "blue")
+  dev.off()
+}
+
+
+#############################################################################################
 #### List-level variation in climate variables
 
 hist(detectData$aetsd)
@@ -188,3 +207,6 @@ write.csv(ppdc, file = "output/CDFA_records_for_archiving.csv", row.names = FALS
 # AMNH data
 amnh <- archiveData[grep("AMNH", archiveData$UID),]
 write.csv(amnh, file = "output/AMNH_records_for_archiving.csv", row.names = FALSE)
+
+
+################################################################################################################

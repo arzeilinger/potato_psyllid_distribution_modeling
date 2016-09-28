@@ -185,7 +185,7 @@ tiff("results/figures/all_hemip_records_CAmap.tif")
   map.axes(cex.axis = 1.4)
   points(duplRecords$DecimalLongitude,
          duplRecords$DecimalLatitude,
-         pch = 1, col = "grey", cex = 1.8)
+         pch = 1, col = "black", cex = 1.8)
   points(ppRecords$DecimalLongitude,
          ppRecords$DecimalLatitude,
          pch = 16, col = "black", cex = 1.8)
@@ -202,7 +202,7 @@ all_hemip_histogram <- ggplot(duplRecords,aes(x=YearCollected)) +
         text = element_text(size = 20),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        #panel.border = element_blank(),
+        panel.border = element_rect(colour = "black"),
         panel.background = element_blank()) 
 
 ggsave(filename = "results/figures/all_hemip_records_year_histogram.tiff", 
@@ -212,23 +212,36 @@ ggsave(filename = "results/figures/all_hemip_records_year_histogram.tiff",
 
 
 ## Map of CA raster cells as polygons
-CAcrop <- readWKT(CApolygon)
-CAraster <- crop(Ref_raster, CAcrop)
-CApoly <- rasterToPolygons(CAraster) 
-lists <- Records[!duplicated(Records["collectionID"]),]
-listpp <- Records[Records$Species == "Bactericera.cockerelli",]
+#### For California state boundary polygon
+## Download States boundaries (might take time)
+out <- getData('GADM', country='United States', level=1)
+## Extract California state
+California <- out[out$NAME_1 %in% 'California',]
+## Reproject California boundary
+California <- spTransform(California, projection(Ref_raster))
+
+## Convert BCM reference raster to polygons
+CApoly <- rasterToPolygons(Ref_raster, dissolve = TRUE) 
+
+## Load species lists data set
+# Load species lists data set with climate data 
+longLists <- readRDS("output/Hemip_Long_Lists_Climate_15km_Cells_2016-06-14.rds")
+# Make into dataframe
+longListsDF <- longLists %>% rbindlist() %>% as.data.frame()
+# select potato psyllid records in the long lists data set
+ppFromLists <- longListsDF %>% dplyr::filter(Species == "Bactericera.cockerelli")
+ppFromLists <- SpatialPointsDataFrame(ppFromLists[,c("decimalLatitude","decimalLongitude")])
+coordinates(ppFromLists) <- c("DecimalLatitude","DecimalLongitude")
+ppFromLists <- spTransform(ppFromLists, CRS(projection(Ref_raster)))
+#### Can't get lat/long of records transformed properly
 
 tiff("results/figures/CA_polygon.tif")
-  map("state", regions="california")
-  lines(CApoly, lty = 2, col = "grey")
-#   points(lists$DecimalLongitude,
-#          lists$DecmialLatitude,
-#          pch = 1, col = "darkgrey", cex = 1.8)
-#   points(listpp$DecimalLongitude,
-#          listpp$DecimalLatitude,
-#          pch = 16, col = "black", cex = 1.8)
+  plot(California)
+  plot(CApoly, add = TRUE, border = "grey", col = "white")
+  # points(ppFromLists$DecimalLongitude,
+  #        ppFromLists$DecmialLatitude,
+  #        pch = 16, col = "black", cex = 0.8)
 dev.off()
-
 
 
 
@@ -310,3 +323,32 @@ tiff("results/figures/CA_polygon.tif")
 dev.off()
 
 
+
+#### Make figures for Essig talk 2016-09-23
+tiff("results/figures/potato_psyllids_records_CAmap.tif")
+  map("state", regions = c("california"))
+  map.axes(cex.axis = 1.4)
+  # points(duplRecords$DecimalLongitude,
+  #        duplRecords$DecimalLatitude,
+  #        pch = 1, col = "grey", cex = 1.8)
+  points(ppRecords$DecimalLongitude,
+         ppRecords$DecimalLatitude,
+         pch = 16, col = "black", cex = 1.8)
+dev.off()
+
+
+#### Histogram of year collected for potato psyllids specimens
+pp_histogram <- ggplot(ppRecords,aes(x=YearCollected)) + 
+  geom_histogram(fill = "black", alpha = 1, binwidth = 1) +
+  #geom_histogram(data=subset(duplRecords,Species == "Bactericera.cockerelli"),fill = "black", alpha = 1, binwidth = 1) +
+  xlab("Year collected") + ylab("Frequency") + 
+  theme_bw() + 
+  theme(axis.line = element_line(colour = "black"),
+        text = element_text(size = 20),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour = "black"),
+        panel.background = element_blank()) 
+
+ggsave(filename = "results/figures/potato_psyllid_records_year_histogram.tiff", 
+       plot = pp_histogram)

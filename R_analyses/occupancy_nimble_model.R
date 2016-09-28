@@ -1,6 +1,9 @@
 #### NIMBLE occupancy model for ZIB GLMM model of potato psyllid occupancy
 #### Originally developed by Daniel Turek
 
+# Clear workspace
+rm(list = ls())
+# Load packages
 my.packages <- c("nimble", "coda", "lattice", "akima")
 lapply(my.packages, require, character.only = TRUE)
 
@@ -26,6 +29,7 @@ code <- nimbleCode({
     for(i in 1:9) {
         beta[i] ~ dnorm(0, 0.001)
     }
+    # Priors for season factor; not used in current model
     # for(i in 1:4) {
     #     betaseason[i] ~ dnorm(0, 0.001)    ## new fixed effects for each season
     #     #betaseasonyear[i] ~ dnorm(0, 0.001)
@@ -83,7 +87,7 @@ Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 niter <- 150000
 burnin <- 50000
 
-samplesList <- lapply(1:3, mcmcClusterFunction)
+samplesList <- lapply(1, mcmcClusterFunction)
 
 save(samplesList, file = 'output/MCMC_list_climate_pocc.RData')
 
