@@ -177,7 +177,9 @@ tiff(paste(outdir,"year-month-occupancy_contourplot_nimble_occupancy_colormap.ti
 dev.off()
 
 
-#### Making raster maps of P(occupancy)
+###########################################################################################
+#### Making point maps of P(occupancy)
+
 # Read in reference raster
 # This reference raster was used to generate the cellIDs, in "Making_species_list.R" script
 # Each cell is 15km x 15km
@@ -287,4 +289,57 @@ tiff(paste(outdir,"list_length_vs_pocc.tif",sep=""))
        cex.axis = 1.3, ylim = c(0,1))
   lines(smooth.spline(detectData$list_length, detectData$pobs, nknots = 4, tol = 1e-20), lwd = 2)
   #lines(llline$covar, llline$predOcc, lwd = 2, lty = 1)
+dev.off()
+
+
+
+############################################################################################
+#### Figures for lists, using detection data set
+
+detectData <- readRDS("output/potato_psyllid_detection_dataset.rds")
+
+#### Histogram of list length
+# Just potato psyllid occurrences
+ppData <- detectData[detectData$detection == 1,]
+
+list_length_histogram <- ggplot(detectData,aes(x=list_length)) + 
+  geom_histogram(fill = "darkgrey", alpha = 1, binwidth = 1) +
+  geom_histogram(data=subset(detectData,detection == 1),fill = "black", alpha = 1, binwidth = 1) +
+  xlab("List length") + ylab("Frequency") + 
+  theme_bw() + 
+  theme(axis.line = element_line(colour = "black"),
+        text = element_text(size = 20),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        #panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+ggsave(filename = "results/figures/list_length_histogram.tiff", plot = list_length_histogram)
+
+
+#### List length over time
+detectData$stdlist_length <- standardize(detectData$list_length)
+llyMod <- lmer(log(list_length) ~ year + (1|cellID), data = detectData)
+plot(llyMod)
+summary(llyMod)
+
+tiff("results/figures/list_length_vs_time_plot.tif")
+  plot(x = detectData$year, y = log(detectData$list_length),
+       ylab = list("Length of species lists (ln transformed)", cex = 1.4), 
+       xlab = list("Year collected", cex = 1.4),
+       cex.axis = 1.3)
+  #lines(smooth.spline(detectData$year, detectData$list_length, nknots = 4, tol = 1e-6, df = 3), lwd = 2)
+  abline(a = fixef(llyMod)[1], b = fixef(llyMod)[2], lwd = 2, col = "black")
+dev.off()
+
+
+#### Trend in proportion of detection lists or reporting rate
+detectData$decade <- detectData$year %>% round(., digits = -1)
+prop.detection <- detectData %>% group_by(decade) %>% summarise(prop = sum(detection)/length(detection)) 
+
+tiff("results/figures/reporting_rate_plot.tif")
+  plot(x = prop.detection$decade, y = prop.detection$prop,
+       xlab = list("Decade collected", cex = 1.4), 
+       ylab = list("Probability of observation", cex = 1.4),
+       cex.axis = 1.3, ylim = c(0,1), pch = 16)
 dev.off()

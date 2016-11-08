@@ -211,7 +211,7 @@ resultsPars$covar <- c("det_intercept", "list_length", "year_list_length", "aet"
 lygusResults <- resultsPars
 
 # Make results table for ms
-lygusTable <- lygusResults[, c("mean", "cil", "ciu")] %>% round(., digits = 2) %>%
+lygusTable <- lygusResults[, c("mean", "cil", "ciu")] %>% signif(., digits = 3) %>%
   cbind(., lygusResults$covar)
 lygusTable$summary <- with(lygusTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
 write.csv(lygusTable, file = "results/lygus_occupancy_results_for_ms.csv", row.names = TRUE)
@@ -383,7 +383,7 @@ resultsPars$covar <- c("det_intercept", "list_length", "year_list_length", "aet"
 myzusResults <- resultsPars
 
 # Make results table for ms
-myzusTable <- myzusResults[, c("mean", "cil", "ciu")] %>% round(., digits = 2) %>%
+myzusTable <- myzusResults[, c("mean", "cil", "ciu")] %>% signif(., digits = 3) %>%
   cbind(., myzusResults$covar)
 myzusTable$summary <- with(myzusTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
 
@@ -586,7 +586,7 @@ resultsPars$covar <- c("det_intercept", "list_length", "year_list_length", "aet"
 rpadiResults <- resultsPars
 
 # Make results table for ms
-rpadiTable <- rpadiResults[, c("mean", "cil", "ciu")] %>% round(., digits = 2) %>%
+rpadiTable <- rpadiResults[, c("mean", "cil", "ciu")] %>% signif(., digits = 3) %>%
   cbind(., rpadiResults$covar)
 rpadiTable$summary <- with(rpadiTable, paste(mean, " [", cil, ", ", ciu, "]", sep = ""))
 write.csv(rpadiTable, file = "results/rpadi_occupancy_results_for_ms.csv", row.names = TRUE)
@@ -644,3 +644,25 @@ ggsave(filename = "results/myzus_coefficient_plot.tiff",
        width = 7, height = 7, units = "in")
 
 
+
+#### Rhopalosiphum padi
+rpadiTable <- read.csv("results/rpadi_occupancy_results_for_ms.csv")
+names(rpadiTable) <- c("beta", "mean", "cil", "ciu", "covar", "summary")
+#### Plotting coefficient estimates
+plotPars <- rpadiTable[!is.na(rpadiTable$covar),]
+coef_plot <- ggplot(plotPars, aes(y = beta, x = mean)) +
+  geom_errorbarh(aes(xmin = cil, xmax = ciu), colour = "black", height = 0.2) +
+  geom_point(size = 3) +
+  geom_vline(linetype = "longdash", xintercept = 0) +
+  xlab("Coefficient estimate") + ylab("Covariate") + 
+  theme_bw() + 
+  theme(axis.line = element_line(colour = "black"),
+        text = element_text(size = 20),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour = "black"),
+        panel.background = element_blank()) 
+#coef_plot
+ggsave(filename = "results/rpadi_coefficient_plot.tiff", 
+       plot = coef_plot,
+       width = 7, height = 7, units = "in")

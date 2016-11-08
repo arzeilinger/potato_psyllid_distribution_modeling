@@ -87,12 +87,17 @@ Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 niter <- 150000
 burnin <- 50000
 
-samplesList <- lapply(1, mcmcClusterFunction)
+ti <- Sys.time()
+samplesList <- lapply(3, mcmcClusterFunction)
+tf <- Sys.time()
 
-save(samplesList, file = 'output/MCMC_list_climate_pocc.RData')
+# The time it took to run MCMC
+tf-ti
+
+#save(samplesList, file = 'output/MCMC_list_climate_pocc.RData')
 
 #### Loading saved MCMC run, sames as list, "samplesList"
-#load(file = 'output/MCMC_month_list.RData')
+load(file = 'output/MCMC_month_list.RData')
 
 
 #######################################################################

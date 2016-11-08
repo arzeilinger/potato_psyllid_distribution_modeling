@@ -4,7 +4,7 @@
 
 rm(list = ls())
 #### Preliminaries
-my_packages<-c('data.table', 'tidyr', 'lattice', 'dplyr', 'ggplot2')
+my_packages<-c('data.table', 'tidyr', 'lattice', 'dplyr', 'ggplot2', "lme4", "lmerTest")
 lapply(my_packages, require, character.only=T)
 
 ## load functions
@@ -101,27 +101,6 @@ jagsGLMMdata <- list(detectionMatrix = detectionMatrix,
 saveRDS(jagsGLMMdata, file = "output/Data_JAGS_GLMM.rds")
 
 
-############################################################################################
-#### Figures for lists
-
-#### Histogram of list length
-# Just potato psyllid occurrences
-ppData <- detectData[detectData$detection == 1,]
-
-list_length_histogram <- ggplot(detectData,aes(x=list_length)) + 
-  geom_histogram(fill = "darkgrey", alpha = 1, binwidth = 1) +
-  geom_histogram(data=subset(detectData,detection == 1),fill = "black", alpha = 1, binwidth = 1) +
-  xlab("List length") + ylab("Frequency") + 
-  theme_bw() + 
-  theme(axis.line = element_line(colour = "black"),
-        text = element_text(size = 20),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        #panel.border = element_blank(),
-        panel.background = element_blank()) 
-
-ggsave(filename = "results/figures/list_length_histogram.tiff", plot = list_length_histogram)
-
 
 #############################################################################################
 #### Exploring intercorrelations among climate variables
@@ -210,3 +189,10 @@ write.csv(amnh, file = "output/AMNH_records_for_archiving.csv", row.names = FALS
 
 
 ################################################################################################################
+#### Exploring other species in the lists
+speciesFreq <- as.data.frame(table(longListsDF$Species))
+names(speciesFreq) <- c("species", "count")
+speciesFreq <- speciesFreq[order(speciesFreq$count),]
+
+# Are there Rhopalosiphum sp. aphids in the data set?
+speciesFreq[grep("Rhopalosiphum", speciesFreq$species),]

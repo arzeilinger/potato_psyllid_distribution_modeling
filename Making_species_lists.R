@@ -90,6 +90,7 @@ Records$Species <- gsub(" ", ".", Records$Species)
 ppCollectors <- findCollectors("Bactericera.cockerelli")
 lygusCollectors <- findCollectors("Lygus.hesperus")
 myzusCollectors <- findCollectors("Myzus.persicae")
+rpadiCollectors <- findCollectors("Rhopalosiphum.padi")
 
 # Remove bad species names: ones without epithet or "undetermined"
 speciesNames <- unique(Records$ScientificName)
