@@ -7,10 +7,10 @@
 
 
 dOccupancy <- nimbleFunction(
-    run = function(x = double(), p_occ = double(), p_obs = double(), log.p = double()) {
+    run = function(x = double(), p_occ = double(), p_obs = double(), log = TRUE) {
         if(x == 0) L <- 1 - p_occ * p_obs else L <- p_occ * p_obs
         returnType(double())
-        if(log.p) return(log(L)) else return(L)
+        if(log == TRUE) return(log(L)) else return(L)
     }
 )
 
