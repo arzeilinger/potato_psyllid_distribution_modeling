@@ -8,13 +8,8 @@ my.packages <- c("nimble", "coda", "lattice", "akima")
 lapply(my.packages, require, character.only = TRUE)
 
 #### Load data set for model fitting
-inputData <- readRDS('output/data_nimble_zib.rds')
+inputData <- readRDS('output/bactericera_data_nimble_occupancy.rds')
 source('R_functions/nimble_definitions.R')
-
-# #### Increasing memory limit for R
-# memory.limit()
-# memory.limit(size = 7000) # Size in Mb
-# memory.limit()
 
 
 #####################################################
@@ -94,7 +89,7 @@ tf <- Sys.time()
 # The time it took to run MCMC
 tf-ti
 
-#save(samplesList, file = 'output/MCMC_list_climate_pocc.RData')
+save(samplesList, file = 'output/MCMC_list_climate_pocc.RData')
 
 #### Loading saved MCMC run, sames as list, "samplesList"
 load(file = 'output/MCMC_month_list.RData')
@@ -127,75 +122,4 @@ names(results) <- c("mean", "cil", "ciu")
 results$params <- row.names(results)
 print(results[1:15,]) # Coefficient results
 
-
-##############################################################################################################
-#### Plots
-
-#### Plotting P(occupancy) against covariates
-pocc <- results[grep("p_occ", results$params),]
-# Load detection data set
-detectData <- readRDS("output/potato_psyllid_detection_dataset.rds")
-detectData$pocc <- pocc$mean
-
-# Year vs P(occupancy)
-tiff("results/figures/occupancy_year_vs_pocc.tif")
-  plot(x = detectData$year, y = detectData$pocc)
-  lines(smooth.spline(detectData$year, detectData$pocc, nknots = 4, tol = 1e-6), lwd = 2)
-dev.off()
-  
-# List length vs P(occupancy)
-tiff("results/figures/occupancy_list_length_vs_pocc.tif")
-  plot(x = detectData$list_length, y = detectData$pocc)
-  lines(smooth.spline(detectData$list_length, detectData$pocc, nknots = 4, tol = 1e-6), lwd = 2)
-dev.off()
-
-# List length vs month
-tiff("results/figures/occupancy_month_vs_pocc.tif")
-  plot(x = detectData$month, y = detectData$pocc)
-  lines(smooth.spline(detectData$month, detectData$pocc, nknots = 4, tol = 1e-6), lwd = 2)
-dev.off()
-
-
-# trivariate plots with month and year
-zz <- with(detectData, interp(x = year, y = month, z = pocc, duplicate = 'median'))
-pdf("results/figures/year-month-occupancy_contourplot_nimble_occupancy.pdf")
-  filled.contour(zz, col = topo.colors(32), xlab = "Year", ylab = "Month")
-dev.off()
-
-
-
-######################################################################################################
-#### Extra code
-
-# set.seed(1)
-# Cmcmc$run(niter)
-# samples1 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
-# 
-# set.seed(2)
-# Cmcmc$run(niter)
-# samples2 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
-# 
-# set.seed(3)
-# Cmcmc$run(niter)
-# samples3 <- as.matrix(Cmcmc$mvSamples)[(burnin+1):niter,]
-# 
-# samplesList <- list(samples1, samples2, samples3)
-# 
-# save(samples1, samples2, samples3, file = 'output/MCMC_season.RData')
-
-
-# ##############################################################################
-# #### Attempt at cluster
-# sfInit(parallel = TRUE, cpus = 2)
-# date()
-# 
-# sfLibrary(nimble)
-# sfExport("Cmcmc", "Rmodel", "niter", "burnin", "mcmcClusterFunction")
-# sfExport("spec")
-# sfExport("Cmodel")
-# sfExport("Rmcmc")
-# sfLapply(1:2, mcmcClusterFunction)
-# 
-# date()
-# sfStop() # Close the cluster
-# #################################################################################
+#### For more analysis, and generating figures, see R script "analyzing_nimble_models.R"

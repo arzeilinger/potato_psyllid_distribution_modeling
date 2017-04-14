@@ -15,12 +15,6 @@ load(file = 'output/MCMC_list_climate_pocc.RData')
 # Directory for figures from occupancy model
 outdir <- "results/figures/occupancy_figures/"
 
-# #### FOR GLMM MODEL
-# #### Loading saved MCMC run, saved as list, "samplesList"
-# load(file = 'output/MCMC_glmm_list2.RData')
-# # Directory for figures from glmm model
-# outdir <- "results/figures/glmm_figures/"
-
 
 #######################################################################
 #### Assessing convergence and summarizing/plotting results
@@ -42,7 +36,6 @@ diagnostics
 
 # Save diagnostic results
 write.csv(diagnostics, file = "results/occupancy_MCMC_diagnostics.csv", row.names = TRUE)
-#write.csv(diagnostics, file = "results/glmm_MCMC_diagnostics.csv", row.names = TRUE)
 
 ## Posterior Density Plots
 pdf(paste(outdir, "trace_and_posterior_density_plots.pdf", sep=""))
@@ -63,19 +56,12 @@ results[1:15,] # Coefficient results
 # Save results for occupancy model
 saveRDS(results, "results/occupancy_model_results.rds")
 
-# # Save results for glmm model
-# saveRDS(results, "results/glmm_model_results.rds")
-
 ##############################################################################################################
 #### Plots
 
 # Load occupancy MCMC results
 results <- readRDS("results/occupancy_model_results.rds")
 covars <- c("det_intercept", "list_length", "year_list_length", "aet", "tmn", "tmx", "year", "month", "month2", NA, NA)
-
-# Load GLMM MCMC results
-# results <- readRDS("results/glmm_model_results.rds")
-# covars <- c("list_length", "year_list_length", "aet", "tmn", "tmx", "year", "month", "month2", NA, NA)
 
 resultsPars <- results[-grep("p_occ", results$params), c("mean", "cil", "ciu", "params")]
 resultsPars$covar <- covars
@@ -89,8 +75,6 @@ resultsTable
 
 # Save results table for ms
 write.csv(resultsTable, file = "results/occupancy_results_table_for_ms.csv", row.names = FALSE)
-#write.csv(resultsTable, file = "results/glmm_results_table_for_ms.csv", row.names = FALSE)
-
 
 #### Plotting coefficient estimates
 plotPars <- resultsPars[!is.na(resultsPars$covar),]
@@ -229,35 +213,6 @@ for(i in 1:length(yearsForMaps)){
           points(ppMap[,1:2], pch = 16, cex = ppMap$layer * 3)
         dev.off()
 }
-
-
-#### for loop to create P(occupancy) raster maps
-# for(i in 1:length(yearsForMaps)){
-#         year.i <- yearsForMaps[i]
-#         # Select only years of interest
-#         rasterData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+nyears), c("year", "cellID", "pocc")]
-#         print(year.i)
-#         print(dim(table(rasterData$cellID, rasterData$year)))
-#         # Average P(occupancy) over years for each cell
-#         rasterSummary <- rasterData %>% group_by(cellID) %>% summarise(meanOcc = mean(pocc)) %>% as.data.frame()
-#         # Use the empty raster to create an output raster
-#         poccMap <- empty_raster_df
-#         poccMap$layer[rasterSummary$cellID] <- rasterSummary$meanOcc
-#         # Create raster from poccMap data.frame 
-#         poccMap <- rasterFromXYZ(poccMap)
-#         # Set extent as lat/long coordinates and plot
-#         # extent(poccMap) <- extent(California)
-#         fileName <- paste(outdir, "occupancy_raster_map_", year.i, ".tif", sep="")
-#         tiff(fileName)
-#         print(rasterVis::levelplot(poccMap, margin = FALSE, par.settings = GrTheme(region = brewer.pal(9, 'Greys'))) +
-#                       latticeExtra::layer(sp.polygons(California)))
-#         dev.off()
-#         # # Alternative method of plotting both raster and California state border
-#         # tiff(fileName)
-#         #   plot(poccMap)
-#         #   map("state", regions = c("california"), add = TRUE)
-#         # dev.off()
-# }
 
 
 
