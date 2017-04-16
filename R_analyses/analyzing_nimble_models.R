@@ -1,9 +1,12 @@
 ##################################################################
 #### Analyzing NIMBLE models
 
+# Clear workspace
+rm(list = ls())
+# Load libraries
 my.packages <- c("coda", "lattice", "akima", "raster",
                  "tidyr", "dplyr", "maps", "rasterVis",
-                 "sp", "fields")
+                 "sp", "fields", "ggplot2")
 lapply(my.packages, require, character.only = TRUE)
 
 source("R_functions/museum_specimen_analysis_functions.R")
@@ -102,6 +105,22 @@ detectData <- readRDS("output/potato_psyllid_detection_dataset.rds")
 detectData$pocc <- pocc$mean
 
 #### Year vs P(occupancy)
+yearPlot <- ggplot(detectData, aes(y = pocc, x = year)) +
+  geom_point(size = 3, pch = 1) +
+  stat_smooth(method = "loess", se = FALSE, span = 2, col = "black") +
+  xlab("Year collected") + ylab("Probability of occupancy") +
+  theme_bw() + 
+  theme(axis.line = element_line(colour = "black"),
+        text = element_text(size = 20),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour = "black"),
+        panel.background = element_blank()) 
+yearPlot
+ggsave(filename = paste(outdir, "year_vs_pocc.tiff", sep=""),
+       plot = yearPlot,
+       width = 7, height = 7, units = "in")
+
 yearline <- coefline("year", "stdyear")
 tiff(paste(outdir,"year_vs_pocc.tif",sep=""))
   plot(x = detectData$year, y = detectData$pocc,
