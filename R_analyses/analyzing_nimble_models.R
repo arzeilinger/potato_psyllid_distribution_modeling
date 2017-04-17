@@ -79,6 +79,13 @@ resultsTable
 # Save results table for ms
 write.csv(resultsTable, file = "results/occupancy_results_table_for_ms.csv", row.names = FALSE)
 
+# Append P(occupancy) results to detectData data set for plotting
+pocc <- results[grep("p_occ", results$params),]
+# Load detection data set
+detectData <- readRDS("output/potato_psyllid_detection_dataset.rds")
+detectData$pocc <- pocc$mean
+
+
 #### Plotting coefficient estimates
 plotPars <- resultsPars[!is.na(resultsPars$covar),]
 coef_plot <- ggplot(plotPars, aes(y = params, x = mean)) +
@@ -98,20 +105,50 @@ ggsave(filename = paste(outdir,"coefficient_plot.tiff",sep=""),
        plot = coef_plot,
        width = 7, height = 7, units = "in")
 
-#### Plotting P(occupancy) against covariates
-pocc <- results[grep("p_occ", results$params),]
-# Load detection data set
-detectData <- readRDS("output/potato_psyllid_detection_dataset.rds")
-detectData$pocc <- pocc$mean
+
+#### Get detection probability results
+# Need to load separate MCMC list with Pobs results
+load(file = 'output/MCMC_list_climate_pobs.RData')
+pobsResults <- as.data.frame(cbind(apply(samplesList[[2]], 2, mean),
+                                   apply(samplesList[[2]], 2, function(x) quantile(x, 0.025)),
+                                   apply(samplesList[[2]], 2, function(x) quantile(x, 0.975))))
+names(pobsResults) <- c("mean", "cil", "ciu")
+pobsResults$params <- row.names(pobsResults)
+pobsResults[1:15,]
+# Add predicted P(obs) to detect data set for plotting
+detectData$pobs <- pobsResults[grep("p_obs", pobsResults$params),]$mean
+
+
+#########################################################################################################
+#### Constructing Figure 2. for Ecological Applications 2017 paper
+
+#### List length vs P(detection)
+llplot <- ggplot(detectData, aes(y = pobs, x = list_length)) +
+  geom_point(size = 1, pch = 1) +
+  stat_smooth(method = "lm", se = FALSE, col = "black") +
+  xlab("Length of species lists") + ylab("Probability of detection") +
+  ylim(0,1) +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        text = element_text(size = 10),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour = "black"),
+        panel.background = element_blank()) 
+llplot
+ggsave(filename = paste(outdir, "list_length_vs_pobs.tiff", sep=""),
+       plot = llplot,
+       width = 3, height = 3, units = "in", dpi = 600)
+
 
 #### Year vs P(occupancy)
 yearPlot <- ggplot(detectData, aes(y = pocc, x = year)) +
-  geom_point(size = 3, pch = 1) +
-  stat_smooth(method = "loess", se = FALSE, span = 2, col = "black") +
+  geom_point(size = 1, pch = 1) +
+  stat_smooth(method = "lm", se = FALSE, col = "black") +
   xlab("Year collected") + ylab("Probability of occupancy") +
   theme_bw() + 
   theme(axis.line = element_line(colour = "black"),
-        text = element_text(size = 20),
+        text = element_text(size = 10),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         panel.border = element_rect(colour = "black"),
@@ -119,65 +156,60 @@ yearPlot <- ggplot(detectData, aes(y = pocc, x = year)) +
 yearPlot
 ggsave(filename = paste(outdir, "year_vs_pocc.tiff", sep=""),
        plot = yearPlot,
-       width = 7, height = 7, units = "in")
-
-yearline <- coefline("year", "stdyear")
-tiff(paste(outdir,"year_vs_pocc.tif",sep=""))
-  plot(x = detectData$year, y = detectData$pocc,
-       xlab = list("Year Collected", cex = 1.4), 
-       ylab = list("Probability of occupancy", cex = 1.4),
-       cex.axis = 1.3)
-  lines(smooth.spline(detectData$year, detectData$pocc, nknots = 4, tol = 1e-6, df = 3), lwd = 2)
-  #lines(yearline$covar, yearline$predOcc, lwd = 2, lty = 1)
-  #abline(lm(detectData$pocc ~ detectData$year), lty = 1, lwd = 2)
-dev.off()
-
-
-#### Month vs. P(occupancy)
-# Doesn't inlcude coefficient line
-tiff(paste(outdir,"month_vs_pocc.tif",sep=""))
-  plot(x = detectData$month, y = detectData$pocc,
-       xlab = list("Month collected", cex = 1.4), 
-       ylab = list("Probability of occupancy", cex = 1.4),
-       cex.axis = 1.3)
-  lines(smooth.spline(detectData$month, detectData$pocc, nknots = 8, tol = 1e-6), lwd = 2)
-dev.off()
-
-# AET vs. P(occupancy)
-tiff(paste(outdir,"aet_vs_pocc.tif",sep=""))
-  plot(x = detectData$aet, y = detectData$pocc,
-       xlab = list("Actual evapotranspiration", cex = 1.4), 
-       ylab = list("Probability of occupancy", cex = 1.4),
-       cex.axis = 1.3)
-  lines(smooth.spline(detectData$aet, detectData$pocc, nknots = 8, tol = 1e-6), lwd = 2)
-dev.off()
-
-# tmn vs. P(occupancy)
-tiff(paste(outdir,"tmn_vs_pocc.tif",sep=""))
-  plot(x = detectData$tmn, y = detectData$pocc,
-       xlab = list("Annual minimum temperature (deg C)", cex = 1.4), 
-       ylab = list("Probability of occupancy", cex = 1.4),
-       cex.axis = 1.3)
-  lines(smooth.spline(detectData$tmn, detectData$pocc, nknots = 8, tol = 1e-6), lwd = 2)
-dev.off()
-
+       width = 3, height = 3, units = "in", dpi = 600)
 
 
 #### trivariate plots with month and year
-zz <- with(detectData, interp(x = year, y = month, z = pocc, duplicate = 'mean'))
-tiff(paste(outdir,"year-month-occupancy_contourplot_nimble_occupancy_greyscale.tif",sep=""))
-  filled.contour(zz, col = gray(seq(0,1,by=0.05)), 
-                 xlab = list("Year collected", cex = 1.4), 
-                 ylab = list("Month collected", cex = 1.4),
-                 cex.axis = 1.3)
-dev.off()
+zz <- with(detectData, interp(x = year, y = month, z = pocc, duplicate = 'mean',
+                              xo = seq(min(year), max(year), length = 200),
+                              yo = seq(min(month), max(month), length = 200)))
+ggzz <- interp2xyz(zz, data.frame = TRUE)
 
-tiff(paste(outdir,"year-month-occupancy_contourplot_nimble_occupancy_colormap.tif",sep=""))
-  filled.contour(zz, col = topo.colors(32), 
-                 xlab = list("Year collected", cex = 1.4), 
-                 ylab = list("Month collected", cex = 1.4),
-                 cex.axis = 1.3)
-dev.off()
+
+monthYearPlot <- ggplot(ggzz) + 
+  aes(x = x, y = y, z = z) + 
+  geom_tile(aes(fill=z)) + 
+  #coord_equal() +
+  stat_contour(aes(fill=..level..), geom="polygon", binwidth=0.005) + 
+  #geom_contour(color="white", alpha=0.5) +
+  scale_fill_distiller(palette="Greys", na.value="white", name = "",
+                       breaks = seq(0,1,by=0.25), labels = seq(0,1,by=0.25)) + 
+  scale_y_continuous(name = "Month collected", limits = c(1,12),
+                     breaks = seq(2,12,by = 2)) +
+  scale_x_continuous(name = "Year collected") + 
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        text = element_text(size = 10),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour = "black"),
+        panel.background = element_blank()) 
+monthYearPlot
+
+#### Level plots using filled.contour (akima package)
+# monthYearPlot <- filled.contour(zz, col = gray(seq(0,1,by=0.05)), 
+#                                  xlab = list("Year collected", cex = 1.4), 
+#                                  ylab = list("Month collected", cex = 1.4),
+#                                  cex.axis = 1)
+# tiff(paste(outdir,"year-month-occupancy_contourplot_nimble_occupancy_greyscale.tiff",sep=""))
+#   filled.contour(zz, col = gray(seq(0,1,by=0.05)), 
+#                  xlab = list("Year collected", cex = 1.4), 
+#                  ylab = list("Month collected", cex = 1.4),
+#                  cex.axis = 1)
+# dev.off()
+# 
+# tiff(paste(outdir,"year-month-occupancy_contourplot_nimble_occupancy_colormap.tif",sep=""))
+#   filled.contour(zz, col = topo.colors(32), 
+#                  xlab = list("Year collected", cex = 1.4), 
+#                  ylab = list("Month collected", cex = 1.4),
+#                  cex.axis = 1.3)
+# dev.off()
+
+# Putting plots together using plot_grid (cowplot package)
+fig2 <- plot_grid(llplot, yearPlot, monthYearPlot, align = "v", ncol = 1, nrow = 3, labels = "auto")
+ggsave(filename = paste(outdir, "figure2.tiff", sep=""),
+       plot = fig2,
+       width = 3, height = 9, units = "in", dpi = 600)
 
 
 ###########################################################################################
@@ -239,31 +271,12 @@ for(i in 1:length(yearsForMaps)){
 #### Making Detection Figures
 #### Results for detection sub-model
 
-load(file = 'output/MCMC_list_climate_pobs.RData')
 # Directory for figures from occupancy model
 #outdir <- "results/figures/occupancy_figures/"
 
-pobsResults <- as.data.frame(cbind(apply(samplesList[[2]], 2, mean),
-                                   apply(samplesList[[2]], 2, function(x) quantile(x, 0.025)),
-                                   apply(samplesList[[2]], 2, function(x) quantile(x, 0.975))))
-names(pobsResults) <- c("mean", "cil", "ciu")
-pobsResults$params <- row.names(pobsResults)
-pobsResults[1:15,]
 
 # Load detection data set
 #detectData <- readRDS("output/potato_psyllid_detection_dataset.rds")
-detectData$pobs <- pobsResults[grep("p_obs", pobsResults$params),]$mean
-
-#### List length vs P(occupancy)
-llline <- coefline("list_length", "stdlnlist_length")
-tiff(paste(outdir,"list_length_vs_pocc.tif",sep=""))
-  plot(x = detectData$list_length, y = detectData$pobs,
-       xlab = list("Length of species lists", cex = 1.4), 
-       ylab = list("Probability of detection", cex = 1.4),
-       cex.axis = 1.3, ylim = c(0,1))
-  lines(smooth.spline(detectData$list_length, detectData$pobs, nknots = 4, tol = 1e-20), lwd = 2)
-  #lines(llline$covar, llline$predOcc, lwd = 2, lty = 1)
-dev.off()
 
 
 
