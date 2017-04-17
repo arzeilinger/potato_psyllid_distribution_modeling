@@ -91,10 +91,6 @@ tf-ti
 
 save(samplesList, file = 'output/MCMC_list_climate_pocc.RData')
 
-#### Loading saved MCMC run, sames as list, "samplesList"
-load(file = 'output/MCMC_month_list.RData')
-
-
 #######################################################################
 #### Assessing convergence and summarizing/plotting results
 #### Assessing convergence of only covariates and mu.alpha. Memory requirements too great to assess for all p_occ[i]
