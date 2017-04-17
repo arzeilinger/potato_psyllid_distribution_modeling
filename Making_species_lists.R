@@ -5,8 +5,8 @@ rm(list = ls())
 #setwd("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project")
 
 ## Load libraries
-my_packages<-c('rgdal', 'sp', 'maptools', 'rgeos', 'ggplot2',
-               'data.table', 'maps', 'tidyr', 'dplyr', 'raster')
+my_packages<-c('rgdal', 'sp', 'maptools', 'rgeos', 'ggplot2', 'ggmap',
+               'data.table', 'maps', 'tidyr', 'dplyr', 'raster', 'cowplot')
 lapply(my_packages, require, character.only=T)
 
 ## Load functions and polygons
@@ -128,6 +128,9 @@ Records <- Records[which(!is.na(Records$cellID) & !is.na(Records$Species)),]
 
 # Keep dataset of replicated Records
 duplRecords <- Records
+# This is the data set submitted to datadryad.org
+dryadRecords <- duplRecords %>% dplyr::select(-Season, -UID, -collectionID)
+saveRDS(dryadRecords, file = "output/hemiptera_records_for_datadryad.rds")
 
 ### Remove duplicate observations that include identical occupancy information 
 Records <- Records[!duplicated(Records[c("Species", "collectionID")]),]
@@ -181,16 +184,34 @@ saveRDS(longLists, file = "output/Hemip_Long_Lists_Climate_15km_Cells_2016-06-14
 ## map of all Hemiptera records, with potato psyllid records in different color
 ppRecords <- duplRecords[duplRecords$Species == "Bactericera.cockerelli",]
 
-tiff("results/figures/all_hemip_records_CAmap.tif")
-  map("state", regions = c("california"))
-  map.axes(cex.axis = 1.4)
-  points(duplRecords$DecimalLongitude,
-         duplRecords$DecimalLatitude,
-         pch = 1, col = "black", cex = 1.8)
-  points(ppRecords$DecimalLongitude,
-         ppRecords$DecimalLatitude,
-         pch = 16, col = "black", cex = 1.8)
-dev.off()
+
+HemipteraCAMap <- ggplot(duplRecords, aes(x = DecimalLongitude, y = DecimalLatitude)) +
+  borders(database = "state", regions = "california") +
+  geom_point(colour = "darkgrey", pch = 1, size = 1) +
+  geom_point(data = subset(duplRecords,Species == "Bactericera.cockerelli"), colour = "black", size = 1) +
+  scale_x_continuous(name = "Longitude") +
+  scale_y_continuous(name = "Latitude") +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        text = element_text(size = 10),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour = "black"),
+        panel.background = element_blank()) 
+  
+#HemipteraCAMap
+
+## Hemiptera CA map using map function
+# tiff("results/figures/all_hemip_records_CAmap.tif")
+#   map("state", regions = c("california"))
+#   map.axes(cex.axis = 1.4)
+#   points(duplRecords$DecimalLongitude,
+#          duplRecords$DecimalLatitude,
+#          pch = 1, col = "grey", cex = 1.8)
+#   points(ppRecords$DecimalLongitude,
+#          ppRecords$DecimalLatitude,
+#          pch = 16, col = "black", cex = 1.8)
+# dev.off()
 
 
 #### Histogram of year collected for all specimens
@@ -200,14 +221,19 @@ all_hemip_histogram <- ggplot(duplRecords,aes(x=YearCollected)) +
   xlab("Year collected") + ylab("Frequency") + 
   theme_bw() + 
   theme(axis.line = element_line(colour = "black"),
-        text = element_text(size = 20),
+        text = element_text(size = 10),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         panel.border = element_rect(colour = "black"),
         panel.background = element_blank()) 
-
 ggsave(filename = "results/figures/all_hemip_records_year_histogram.tiff", 
        plot = all_hemip_histogram)
+
+fig1 <- plot_grid(HemipteraCAMap, all_hemip_histogram, align = "h", nrow = 1, ncol = 2, labels = "auto")
+ggsave(filename = "results/figures/occupancy_figures/final_figures/figure1.tiff",
+       plot = fig1,
+       width = 6, height = 3, units = "in", dpi = 600)
+
 
 
 
