@@ -130,7 +130,7 @@ Records <- Records[which(!is.na(Records$cellID) & !is.na(Records$Species)),]
 # Keep dataset of replicated Records
 duplRecords <- Records
 # This is the data set submitted to datadryad.org
-dryadRecords <- duplRecords %>% dplyr::select(-Season, -collectionID, -Error, -DecadeFactor)
+dryadRecords <- duplRecords %>% dplyr::select(-Season, -Error, -DecadeFactor, -Date)
 saveRDS(dryadRecords, file = "output/hemiptera_records_for_datadryad.rds")
 write.csv(dryadRecords, file = "output/hemiptera_records_for_datadryad.csv", row.names = FALSE)
 
@@ -237,10 +237,10 @@ all_hemip_histogram
 ggsave(filename = "results/figures/all_hemip_records_year_histogram.tiff", 
        plot = all_hemip_histogram)
 
-fig1 <- plot_grid(HemipteraCAMap, all_hemip_histogram, align = "h", nrow = 1, ncol = 2, labels = "auto")
+fig1 <- plot_grid(HemipteraCAMap, all_hemip_histogram, align = "v", nrow = 2, ncol = 1, labels = "auto")
 ggsave(filename = "results/figures/occupancy_figures/final_figures/figure1.tiff",
        plot = fig1,
-       width = 6, height = 3, units = "in", dpi = 600)
+       width = 3, height = 6, units = "in", dpi = 600)
 
 
 
