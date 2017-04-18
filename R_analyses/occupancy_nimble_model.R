@@ -24,11 +24,6 @@ code <- nimbleCode({
     for(i in 1:9) {
         beta[i] ~ dnorm(0, 0.001)
     }
-    # Priors for season factor; not used in current model
-    # for(i in 1:4) {
-    #     betaseason[i] ~ dnorm(0, 0.001)    ## new fixed effects for each season
-    #     #betaseasonyear[i] ~ dnorm(0, 0.001)
-    # }
     for(i in 1:N) {
         logit(p_occ[i]) <- alpha[siteID[i]] + beta[4]*aet[i] + beta[5]*tmn[i] + beta[6]*tmx[i] + beta[7]*year[i] + beta[8]*month[i] + beta[9]*month2[i]
         logit(p_obs[i]) <- beta[1] + beta[2]*list_length[i] + beta[3]*year_list_length[i]
