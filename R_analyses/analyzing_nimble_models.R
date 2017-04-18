@@ -4,7 +4,7 @@
 # Clear workspace
 rm(list = ls())
 # Load libraries
-my.packages <- c("coda", "lattice", "akima", "raster",
+my.packages <- c("HH", "coda", "lattice", "akima", "raster",
                  "tidyr", "dplyr", "maps", "rasterVis",
                  "sp", "fields", "ggplot2")
 lapply(my.packages, require, character.only = TRUE)
@@ -257,27 +257,68 @@ for(i in 1:length(yearsForMaps)){
         ppMap$layer[ppData] <- 1
         ppMap <- ppMap %>% dplyr::filter(complete.cases(.))
         ppMap <- semi_join(x = poccMap, y = ppMap, by = c("x", "y"))
-        fileName <- paste(outdir,"occupancy_raster_map_", year.i, "_points.tif", sep="")
-        tiff(fileName)
+        fileName <- paste(outdir,"occupancy_raster_map_", year.i, "_points.pdf", sep="")
+        pdf(fileName)
           plot(California, border = "darkgrey")
           points(poccMap_points[, 1:2], pch = 1, cex = poccMap_points$layer * 3)
           points(ppMap[,1:2], pch = 16, cex = ppMap$layer * 3)
         dev.off()
 }
 
+###########################################################################################
+#### Making point maps of P(occupancy) in ggplot2 and ggmap
 
-
-############################################################################################
-#### Making Detection Figures
-#### Results for detection sub-model
-
-# Directory for figures from occupancy model
-#outdir <- "results/figures/occupancy_figures/"
-
-
-# Load detection data set
-#detectData <- readRDS("output/potato_psyllid_detection_dataset.rds")
-
+# Read in reference raster
+# This reference raster was used to generate the cellIDs, in "Making_species_list.R" script
+# Each cell is 15km x 15km
+#### Load reference raster
+Ref_raster <- readRDS("output/reference_raster.rds")
+### Create empty output raster
+empty_raster_df <- as.data.frame(Ref_raster, xy = TRUE)
+empty_raster_df$layer <- NA
+#### For California state boundary polygon
+## Download States boundaries (might take time)
+out <- getData('GADM', country='United States', level=1)
+## Extract California state
+California <- out[out$NAME_1 %in% 'California',]
+## Reproject California boundary
+California <- spTransform(California, projection(Ref_raster))
+#### Replace cell values with P(occupancy) for cells with data
+#### P(occupancy) values are averaged over 20 years for each cell
+yearsForMaps <- c(1920, 1950, 1990) # The years for which each raster map will begin
+nyears <- 25 # Number of years combined in each raster map
+i <- 2
+#### for loop to make maps with different-sized points instead of raster cells
+# The size of symbols are relative to the P(occupancy) value
+for(i in 1:length(yearsForMaps)){
+  year.i <- yearsForMaps[i]
+  # Select only years of interest
+  rasterData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+nyears), c("year", "cellID", "pocc")]
+  print(year.i)
+  print(dim(table(rasterData$cellID, rasterData$year)))
+  # Average P(occupancy) over years for each cell
+  rasterSummary <- rasterData %>% group_by(cellID) %>% summarise(meanOcc = mean(pocc)) %>% as.data.frame()
+  # Use the empty raster to create an output raster
+  poccMap <- empty_raster_df
+  poccMap$layer[rasterSummary$cellID] <- rasterSummary$meanOcc
+  poccMap_points <- poccMap %>% dplyr::filter(complete.cases(.))
+  #### Add points for potato psyllid detections
+  ppData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+nyears) & detectData$detection == 1, c("year", "cellID")]
+  # CellIDs where potato psyllids were collected
+  ppData <- unique(ppData$cellID)
+  ppMap <- empty_raster_df
+  ppMap$layer[ppData] <- 1
+  ppMap <- ppMap %>% dplyr::filter(complete.cases(.))
+  ppMap <- semi_join(x = poccMap, y = ppMap, by = c("x", "y"))
+  fileName <- paste(outdir,"occupancy_raster_map_", year.i, "_points.pdf", sep="")
+  CApoccMap <- ggplot(ppMap, aes(x = x, y = y)) +
+    borders(database = "state", regions = "california") +
+    #coord_map(projection = projection(Ref_raster)) +
+    geom_point(data = poccMap_points[, 1:2], pch = 1, size = poccMap_points$layer * 3) +
+    geom_point(data = ppMap[,1:2], pch = 16, size = ppMap$layer * 3) +
+    borders(database = "state", regions = "california") 
+CApoccMap
+  }
 
 
 ############################################################################################

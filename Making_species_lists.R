@@ -5,8 +5,9 @@ rm(list = ls())
 #setwd("C:/Users/Adam/Documents/UC Berkeley post doc/BIGCB/Pest Project")
 
 ## Load libraries
-my_packages<-c('rgdal', 'sp', 'maptools', 'rgeos', 'ggplot2', 'ggmap',
-               'data.table', 'maps', 'tidyr', 'dplyr', 'raster', 'cowplot')
+my_packages<-c('rgdal', 'sp', 'maptools', 'rgeos', 'ggplot2', 
+               'data.table', 'maps', 'tidyr', 'dplyr', 
+               'raster', 'cowplot', 'ggmap', 'ggsn')
 lapply(my_packages, require, character.only=T)
 
 ## Load functions and polygons
@@ -129,8 +130,9 @@ Records <- Records[which(!is.na(Records$cellID) & !is.na(Records$Species)),]
 # Keep dataset of replicated Records
 duplRecords <- Records
 # This is the data set submitted to datadryad.org
-dryadRecords <- duplRecords %>% dplyr::select(-Season, -UID, -collectionID)
+dryadRecords <- duplRecords %>% dplyr::select(-Season, -collectionID, -Error, -DecadeFactor)
 saveRDS(dryadRecords, file = "output/hemiptera_records_for_datadryad.rds")
+write.csv(dryadRecords, file = "output/hemiptera_records_for_datadryad.csv", row.names = FALSE)
 
 ### Remove duplicate observations that include identical occupancy information 
 Records <- Records[!duplicated(Records[c("Species", "collectionID")]),]
@@ -182,6 +184,7 @@ saveRDS(longLists, file = "output/Hemip_Long_Lists_Climate_15km_Cells_2016-06-14
 ##############################################################################################
 #### Exploring the cleaned data set of duplicated records
 ## map of all Hemiptera records, with potato psyllid records in different color
+duplRecords <- readRDS("output/hemiptera_records_for_datadryad.rds")
 ppRecords <- duplRecords[duplRecords$Species == "Bactericera.cockerelli",]
 
 
@@ -191,6 +194,9 @@ HemipteraCAMap <- ggplot(duplRecords, aes(x = DecimalLongitude, y = DecimalLatit
   geom_point(data = subset(duplRecords,Species == "Bactericera.cockerelli"), colour = "black", size = 1) +
   scale_x_continuous(name = "Longitude") +
   scale_y_continuous(name = "Latitude") +
+  ggsn::north(location = "bottomleft", symbol = 10, 
+              x.min = min(duplRecords$DecimalLongitude), x.max = max(duplRecords$DecimalLongitude),
+              y.min = min(duplRecords$DecimalLatitude), y.max = max(duplRecords$DecimalLatitude)) +
   theme_bw() +
   theme(axis.line = element_line(colour = "black"),
         text = element_text(size = 10),
@@ -199,7 +205,7 @@ HemipteraCAMap <- ggplot(duplRecords, aes(x = DecimalLongitude, y = DecimalLatit
         panel.border = element_rect(colour = "black"),
         panel.background = element_blank()) 
   
-#HemipteraCAMap
+HemipteraCAMap
 
 ## Hemiptera CA map using map function
 # tiff("results/figures/all_hemip_records_CAmap.tif")
@@ -226,6 +232,8 @@ all_hemip_histogram <- ggplot(duplRecords,aes(x=YearCollected)) +
         panel.grid.minor = element_blank(),
         panel.border = element_rect(colour = "black"),
         panel.background = element_blank()) 
+all_hemip_histogram
+
 ggsave(filename = "results/figures/all_hemip_records_year_histogram.tiff", 
        plot = all_hemip_histogram)
 
