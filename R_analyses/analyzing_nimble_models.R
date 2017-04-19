@@ -4,9 +4,9 @@
 # Clear workspace
 rm(list = ls())
 # Load libraries
-my.packages <- c("HH", "coda", "lattice", "akima", "raster",
-                 "tidyr", "dplyr", "maps", "rasterVis",
-                 "sp", "fields", "ggplot2")
+my.packages <- c("coda", "lattice", "akima", "raster",
+                 "tidyr", "dplyr", "maps", "cowplot",
+                 "sp", "ggplot2")
 lapply(my.packages, require, character.only = TRUE)
 
 source("R_functions/museum_specimen_analysis_functions.R")
@@ -230,10 +230,20 @@ out <- getData('GADM', country='United States', level=1)
 California <- out[out$NAME_1 %in% 'California',]
 ## Reproject California boundary
 California <- spTransform(California, projection(Ref_raster))
-#### Replace cell values with P(occupancy) for cells with data
-#### P(occupancy) values are averaged over 20 years for each cell
+# Transform "California" map object from SpatialPolygonsDataFrame to data.frame for plotting in ggplot
+California@data$id <- row.names(California@data)
+CAPoints <- fortify(California, region = "id")
+CAPointsDF <- merge(CAPoints, California@data, by = "id")
+#### P(occupancy) values are averaged over 25 years for each cell
 yearsForMaps <- c(1920, 1950, 1990) # The years for which each raster map will begin
 nyears <- 25 # Number of years combined in each raster map
+mapList <- vector('list', 3) # Empty list for holding the ggplot maps
+# Define ggplot theme that removes axes, labels, titles, and legend
+themeMinimal <- theme(plot.background=element_blank(), panel.grid.minor=element_blank(), 
+                panel.border=element_blank(), panel.background=element_blank(), 
+                axis.line=element_blank(),axis.ticks=element_blank(), 
+                legend.position = "none", 
+                axis.text.x=element_blank(), axis.text.y=element_blank())
 #i <- 2
 #### for loop to make maps with different-sized points instead of raster cells
 # The size of symbols are relative to the P(occupancy) value
@@ -257,13 +267,86 @@ for(i in 1:length(yearsForMaps)){
         ppMap$layer[ppData] <- 1
         ppMap <- ppMap %>% dplyr::filter(complete.cases(.))
         ppMap <- semi_join(x = poccMap, y = ppMap, by = c("x", "y"))
-        fileName <- paste(outdir,"occupancy_raster_map_", year.i, "_points.pdf", sep="")
-        pdf(fileName)
+        # Include a "group" variable, necessary for adding points to ggplot
+        # group = 6.1 identifies the points as being in mainland California, as opposed to the channel islands,
+        # but does not seem to affect the few points on the channel islands
+        poccMap_points$group <- 6.1
+        ppMap$group <- 6.1
+        fileName <- paste(outdir,"occupancy_raster_map_", year.i, "_points.tif", sep="")
+        # Make .tif files
+        tiff(fileName)
           plot(California, border = "darkgrey")
           points(poccMap_points[, 1:2], pch = 1, cex = poccMap_points$layer * 3)
           points(ppMap[,1:2], pch = 16, cex = ppMap$layer * 3)
         dev.off()
+        # Make ggplot files
+        ggppMap <- ggplot(CAPointsDF, aes(x = long, y = lat, group = group)) +
+          geom_path(colour = "darkgrey") +
+          geom_point(data = poccMap_points, aes(x = x, y = y, group = group, size = layer), shape = 1) +
+          geom_point(data = ppMap, aes(x = x, y = y, group = group, size = layer), shape = 16) +
+          scale_size(breaks = seq(0,1,by=0.2), range = c(0,3)) +
+          ylab("") + xlab("") +
+          themeMinimal
+        mapList[[i]] <- ggppMap
 }
+
+#### Save all three maps to a .tif file
+# Putting plots together using plot_grid (cowplot package)
+fig3 <- plot_grid(plotlist = mapList, align = "h", ncol = 3, nrow = 1, labels = "auto", hjust = -2, vjust = 2.5)
+ggsave(filename = paste(outdir, "figure3.tiff", sep=""),
+       plot = fig3,
+       width = 9, height = 3, units = "in", dpi = 600)
+
+
+#### Plotting each map by hand and exporting as .eps
+# 1920 plot
+plot.new()
+par(mar = c(0,0,0,0))
+plot(California, border = "darkgrey")
+points(poccMapList[[1]][, 1:2], pch = 1, cex = poccMapList[[1]]$layer * 3)
+points(ppMapList[[1]][,1:2], pch = 16, cex = ppMapList[[1]]$layer * 3)
+export.eps("occupancy_map_1920_points.eps", width = 2, height = 2)
+
+
+# transform layer variable to be evenly spaced integers
+poccMap_points$translayer <- as.integer(round(poccMap_points$layer*10, digits = 0))
+
+
+ggppMap <- ggplot(CAPointsDF, aes(x = long, y = lat, group = group)) +
+  geom_path(colour = "black") 
+  #geom_polygon(colour = "white") 
+ggppMap + 
+  geom_point(data = poccMap_points, aes(x = x, y = y, group = group, size = layer), shape = 1) +
+  geom_point(data = ppMap, aes(x = x, y = y, group = group, size = layer), shape = 16) +
+  scale_size_area(breaks = seq(0,1,by=0.2)) +
+  ylab("") + xlab("") +
+  theme1
+
+ggppMap
+
+test <- CAPointsDF %>% dplyr::filter(group == 6.1 | group == 6.2 | group == 6.3)
+ggplot(test, aes(x = long, y = lat, group = group)) +
+  geom_path(colour = "black") 
+
+mydf <- data.frame(x = c(1, 2, 3),
+                   y = c(1, 2, 3),
+                   count = c(10, 20, 30))
+
+ggplot(mydf, aes(x = x, y = y)) + geom_point(aes(size = count))
+
+fonts <- list(sans = "Verdana", mono = "Times New Roman")
+svglite("plot.svg", system_fonts = fonts)
+qplot(mpg, wt, data = mtcars, colour = factor(cyl))
+dev.off()
+
+tmp <- tempfile()
+svglite(tmp)
+plot(California, border = "darkgrey")
+points(poccMap_points[, 1:2], pch = 1, cex = poccMap_points$layer * 3)
+points(ppMap[,1:2], pch = 16, cex = ppMap$layer * 3)
+dev.off()
+
+rsvg_pdf(tmp, "out.pdf")
 
 ###########################################################################################
 #### Making point maps of P(occupancy) in ggplot2 and ggmap
