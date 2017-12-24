@@ -215,6 +215,7 @@ ggsave(filename = paste(outdir, "figure2.tiff", sep=""),
 ###########################################################################################
 #### Making point maps of P(occupancy)
 
+
 # Read in reference raster
 # This reference raster was used to generate the cellIDs, in "Making_species_list.R" script
 # Each cell is 15km x 15km
@@ -295,7 +296,7 @@ for(i in 1:length(yearsForMaps)){
 fig3 <- plot_grid(plotlist = mapList, align = "h", ncol = 3, nrow = 1, labels = "auto", hjust = -2, vjust = 2.5)
 ggsave(filename = paste(outdir, "figure3.tiff", sep=""),
        plot = fig3,
-       width = 9, height = 3, units = "in", dpi = 600)
+       width = 9, height = 3, units = "in", dpi = 600, compression = "lzw")
 
 
 #### Plotting each map by hand and exporting as .eps
@@ -307,101 +308,6 @@ points(poccMapList[[1]][, 1:2], pch = 1, cex = poccMapList[[1]]$layer * 3)
 points(ppMapList[[1]][,1:2], pch = 16, cex = ppMapList[[1]]$layer * 3)
 export.eps("occupancy_map_1920_points.eps", width = 2, height = 2)
 
-
-# transform layer variable to be evenly spaced integers
-poccMap_points$translayer <- as.integer(round(poccMap_points$layer*10, digits = 0))
-
-
-ggppMap <- ggplot(CAPointsDF, aes(x = long, y = lat, group = group)) +
-  geom_path(colour = "black") 
-  #geom_polygon(colour = "white") 
-ggppMap + 
-  geom_point(data = poccMap_points, aes(x = x, y = y, group = group, size = layer), shape = 1) +
-  geom_point(data = ppMap, aes(x = x, y = y, group = group, size = layer), shape = 16) +
-  scale_size_area(breaks = seq(0,1,by=0.2)) +
-  ylab("") + xlab("") +
-  theme1
-
-ggppMap
-
-test <- CAPointsDF %>% dplyr::filter(group == 6.1 | group == 6.2 | group == 6.3)
-ggplot(test, aes(x = long, y = lat, group = group)) +
-  geom_path(colour = "black") 
-
-mydf <- data.frame(x = c(1, 2, 3),
-                   y = c(1, 2, 3),
-                   count = c(10, 20, 30))
-
-ggplot(mydf, aes(x = x, y = y)) + geom_point(aes(size = count))
-
-fonts <- list(sans = "Verdana", mono = "Times New Roman")
-svglite("plot.svg", system_fonts = fonts)
-qplot(mpg, wt, data = mtcars, colour = factor(cyl))
-dev.off()
-
-tmp <- tempfile()
-svglite(tmp)
-plot(California, border = "darkgrey")
-points(poccMap_points[, 1:2], pch = 1, cex = poccMap_points$layer * 3)
-points(ppMap[,1:2], pch = 16, cex = ppMap$layer * 3)
-dev.off()
-
-rsvg_pdf(tmp, "out.pdf")
-
-###########################################################################################
-#### Making point maps of P(occupancy) in ggplot2 and ggmap
-
-# Read in reference raster
-# This reference raster was used to generate the cellIDs, in "Making_species_list.R" script
-# Each cell is 15km x 15km
-#### Load reference raster
-Ref_raster <- readRDS("output/reference_raster.rds")
-### Create empty output raster
-empty_raster_df <- as.data.frame(Ref_raster, xy = TRUE)
-empty_raster_df$layer <- NA
-#### For California state boundary polygon
-## Download States boundaries (might take time)
-out <- getData('GADM', country='United States', level=1)
-## Extract California state
-California <- out[out$NAME_1 %in% 'California',]
-## Reproject California boundary
-California <- spTransform(California, projection(Ref_raster))
-#### Replace cell values with P(occupancy) for cells with data
-#### P(occupancy) values are averaged over 20 years for each cell
-yearsForMaps <- c(1920, 1950, 1990) # The years for which each raster map will begin
-nyears <- 25 # Number of years combined in each raster map
-i <- 2
-#### for loop to make maps with different-sized points instead of raster cells
-# The size of symbols are relative to the P(occupancy) value
-for(i in 1:length(yearsForMaps)){
-  year.i <- yearsForMaps[i]
-  # Select only years of interest
-  rasterData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+nyears), c("year", "cellID", "pocc")]
-  print(year.i)
-  print(dim(table(rasterData$cellID, rasterData$year)))
-  # Average P(occupancy) over years for each cell
-  rasterSummary <- rasterData %>% group_by(cellID) %>% summarise(meanOcc = mean(pocc)) %>% as.data.frame()
-  # Use the empty raster to create an output raster
-  poccMap <- empty_raster_df
-  poccMap$layer[rasterSummary$cellID] <- rasterSummary$meanOcc
-  poccMap_points <- poccMap %>% dplyr::filter(complete.cases(.))
-  #### Add points for potato psyllid detections
-  ppData <- detectData[detectData$year >= year.i & detectData$year <= (year.i+nyears) & detectData$detection == 1, c("year", "cellID")]
-  # CellIDs where potato psyllids were collected
-  ppData <- unique(ppData$cellID)
-  ppMap <- empty_raster_df
-  ppMap$layer[ppData] <- 1
-  ppMap <- ppMap %>% dplyr::filter(complete.cases(.))
-  ppMap <- semi_join(x = poccMap, y = ppMap, by = c("x", "y"))
-  fileName <- paste(outdir,"occupancy_raster_map_", year.i, "_points.pdf", sep="")
-  CApoccMap <- ggplot(ppMap, aes(x = x, y = y)) +
-    borders(database = "state", regions = "california") +
-    #coord_map(projection = projection(Ref_raster)) +
-    geom_point(data = poccMap_points[, 1:2], pch = 1, size = poccMap_points$layer * 3) +
-    geom_point(data = ppMap[,1:2], pch = 16, size = ppMap$layer * 3) +
-    borders(database = "state", regions = "california") 
-CApoccMap
-  }
 
 
 ############################################################################################
