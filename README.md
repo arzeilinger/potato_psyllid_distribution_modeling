@@ -1,5 +1,5 @@
 # potato_psyllid_distribution_modeling
-Analysis of potato psyllid museum specimens.
+Analysis of potato psyllid museum specimens. Analysis for Ecological Applications (2017) "Museum specimen data reveal emergence of a plant disease may be linked to increases in the insect vector population"
 
 Includes analysis using Bayesian occupancy model using nimble.
 
